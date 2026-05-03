@@ -1,0 +1,665 @@
+// ContentView.swift
+// CUP QUEEN — Las Vegas Arcade Shell Game
+// Home screen: gameplay-first layout. Cups are the hero. App Store safe.
+//
+// Extension points:
+//   GAMECENTER : Leaderboard button → GKGameCenterViewController
+//   SKINS      : Skin picker sheet
+//   ANALYTICS  : Track open → "Play Now" tap funnel
+
+import SwiftUI
+
+// MARK: - Pre-computed star data (deterministic; avoids per-render random)
+
+private func makeStars() -> [StarData] {
+    var out: [StarData] = []
+    for i in 0..<28 {
+        let x: CGFloat       = CGFloat(i) * 14.2 + 8
+        let y: CGFloat       = CGFloat((i * 41 + 17) % 860)
+        let size: CGFloat    = CGFloat(1 + (i % 4))
+        let opacity: Double  = 0.25 + Double(i % 6) * 0.09
+        let duration: Double = 1.4  + Double(i % 7) * 0.18
+        let delay: Double    = Double(i % 9) * 0.22
+        out.append(StarData(id: i, x: x, y: y, size: size,
+                            opacity: opacity, duration: duration, delay: delay))
+    }
+    return out
+}
+
+private let backgroundStars: [StarData] = makeStars()
+
+private struct StarData: Identifiable {
+    let id: Int
+    let x, y, size: CGFloat
+    let opacity, duration, delay: Double
+}
+
+// MARK: - ContentView
+
+struct ContentView: View {
+
+    @State private var animateStars    = false
+    @State private var glowPulse      = false
+    @State private var ctaPulse       = false
+    @State private var ballGlow       = false
+    @State private var showGameCenter = false
+
+    // Persisted best stats — read fresh each time view appears
+    @State private var savedHighScore: Int = 0
+    @State private var savedBestLevel: Int = 1
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                casinoBackground
+                starField
+                cupSpotlight
+
+                VStack(spacing: 0) {
+                    Spacer().frame(height: 58)   // below status bar / Dynamic Island
+
+                    titleSection
+                    Spacer().frame(height: 8)
+
+                    challengeBadge
+                    Spacer().frame(height: 10)
+
+                    if savedHighScore > 0 {
+                        bestStatsRow
+                    }
+                    Spacer().frame(height: 14)
+
+                    gamePreviewSection           // ← HERO: host + cups + ball
+                    Spacer().frame(height: 18)
+
+                    howToPlayRow
+                    Spacer().frame(height: 18)
+
+                    playNowButton
+                    Spacer().frame(height: 10)
+
+                    footerText
+                    Spacer().frame(height: 24)
+                }
+                .padding(.horizontal, 22)
+            }
+            .ignoresSafeArea(edges: .top)
+            .sheet(isPresented: $showGameCenter) { GameCenterView() }
+            .onAppear {
+                startAnimations()
+                savedHighScore = UserDefaults.standard.integer(forKey: "cq_highScore")
+                savedBestLevel = max(1, UserDefaults.standard.integer(forKey: "cq_bestLevel"))
+            }
+        }
+    }
+
+    private func startAnimations() {
+        animateStars = true
+        withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { glowPulse = true }
+        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) { ctaPulse  = true }
+        withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { ballGlow  = true }
+    }
+
+    // MARK: - Background
+
+    private var casinoBackground: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.06, green: 0.02, blue: 0.18),
+                Color(red: 0.14, green: 0.04, blue: 0.28),
+                Color(red: 0.06, green: 0.02, blue: 0.18)
+            ],
+            startPoint: .top, endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+
+    private var starField: some View {
+        GeometryReader { geo in
+            ForEach(backgroundStars) { star in
+                Circle()
+                    .fill(Color.yellow.opacity(star.opacity))
+                    .frame(width: star.size, height: star.size)
+                    .position(x: star.x, y: star.y * (geo.size.height / 860))
+                    .scaleEffect(animateStars ? 1.5 : 0.7)
+                    .animation(
+                        .easeInOut(duration: star.duration)
+                            .repeatForever(autoreverses: true)
+                            .delay(star.delay),
+                        value: animateStars
+                    )
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    /// Soft yellow spotlight aimed at the cup preview (mid-screen).
+    private var cupSpotlight: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 200)
+            RadialGradient(
+                colors: [
+                    Color.yellow.opacity(glowPulse ? 0.14 : 0.07),
+                    Color.clear
+                ],
+                center: .top, startRadius: 0, endRadius: 380
+            )
+            .frame(height: 380)
+            Spacer()
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Title Section
+
+    private var titleSection: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 5) {
+                Text("CUP QUEEN")
+                .font(.system(size: 46, weight: .heavy, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 1.00, green: 0.93, blue: 0.38),
+                            Color(red: 1.00, green: 0.68, blue: 0.05),
+                            Color(red: 1.00, green: 0.93, blue: 0.38)
+                        ],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(color: Color(red: 1, green: 0.7, blue: 0).opacity(0.9), radius: 20, y: 3)
+
+                Text("FIND THE BALL")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.90))
+                    .tracking(7)
+            }
+            .frame(maxWidth: .infinity)
+
+            // Game Center leaderboard button
+            if GameCenterManager.shared.isAuthenticated {
+                Button {
+                    showGameCenter = true
+                } label: {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                        .shadow(color: Color.yellow.opacity(0.55), radius: 6)
+                }
+                .offset(x: 4, y: 2)
+            }
+        }
+    }
+
+    // MARK: - Challenge Badge
+
+    private var challengeBadge: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(Color(red: 1, green: 0.45, blue: 0.18))
+            Text("Only 1% of players beat Level 7")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color(red: 1, green: 0.62, blue: 0.22), Color(red: 1, green: 0.36, blue: 0.15)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                )
+            Image(systemName: "flame.fill")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(Color(red: 1, green: 0.45, blue: 0.18))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(
+            Capsule()
+                .fill(Color(red: 1, green: 0.35, blue: 0.12).opacity(0.13))
+                .overlay(Capsule().strokeBorder(
+                    Color(red: 1, green: 0.45, blue: 0.12).opacity(0.40), lineWidth: 1
+                ))
+        )
+    }
+
+    // MARK: - Best Stats Row
+
+    private var bestStatsRow: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 5) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                Text("Level \(savedBestLevel)")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+            }
+            Rectangle()
+                .fill(Color.white.opacity(0.18))
+                .frame(width: 1, height: 14)
+            HStack(spacing: 5) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                Text("\(savedHighScore) pts")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 7)
+        .background(
+            Capsule()
+                .fill(Color(red: 1, green: 0.75, blue: 0.10).opacity(0.12))
+                .overlay(Capsule().strokeBorder(
+                    Color(red: 1, green: 0.80, blue: 0.22).opacity(0.35), lineWidth: 1
+                ))
+        )
+    }
+
+    // MARK: - Game Preview Section (HERO)
+
+    private var gamePreviewSection: some View {
+        VStack(spacing: 0) {
+            // Magician host — upper body, tasteful, pointing toward cups
+            HostCharacterView(glowPulse: glowPulse)
+                .frame(height: 90)
+
+            Spacer().frame(height: 6)
+
+            // Cups + ball — the actual gameplay visual
+            cupTableView
+        }
+        .padding(.top, 16)
+        .padding(.bottom, 18)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.32),
+                            Color(red: 0.10, green: 0.05, blue: 0.26).opacity(0.55)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color.yellow.opacity(0.55),
+                                    Color.purple.opacity(0.30),
+                                    Color.yellow.opacity(0.55)
+                                ],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                )
+        )
+    }
+
+    /// Felt table with 3 cups and the golden ball visible under the centre cup.
+    private var cupTableView: some View {
+        ZStack(alignment: .bottom) {
+
+            // Glow spotlight behind centre cup
+            Ellipse()
+                .fill(Color.yellow.opacity(glowPulse ? 0.24 : 0.11))
+                .frame(width: 96, height: 32)
+                .blur(radius: 12)
+                .offset(y: -14)
+
+            // Felt table strip
+            RoundedRectangle(cornerRadius: 6)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.08, green: 0.28, blue: 0.14),
+                            Color(red: 0.05, green: 0.18, blue: 0.09)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 14)
+                .padding(.horizontal, 8)
+                .shadow(color: .black.opacity(0.55), radius: 10, y: 5)
+
+            // Three cups
+            HStack(spacing: 20) {
+                PreviewCupView(lit: false)          // left
+                centreWithBall                       // centre — ball visible
+                PreviewCupView(lit: false)          // right
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 14)                   // sits on felt surface
+        }
+    }
+
+    /// Centre cup with the golden ball sitting in front of it.
+    private var centreWithBall: some View {
+        ZStack(alignment: .bottom) {
+            PreviewCupView(lit: true)
+
+            GoldenBallView(diameter: 26, glowPulse: ballGlow)
+                .offset(y: 18)   // rests on table surface, slightly below cup base
+        }
+    }
+
+    // MARK: - How to Play (horizontal, compact)
+
+    private var howToPlayRow: some View {
+        HStack(spacing: 0) {
+            howToStep(icon: "eye.fill",            label: "Watch the Ball")
+            rowDivider
+            howToStep(icon: "arrow.triangle.swap", label: "Follow Cups")
+            rowDivider
+            howToStep(icon: "hand.tap.fill",       label: "Tap to Win")
+        }
+        .padding(.vertical, 13)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.30), Color.purple.opacity(0.20)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
+    }
+
+    private func howToStep(icon: String, label: String) -> some View {
+        VStack(spacing: 7) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.black)
+                .frame(width: 30, height: 30)
+                .background(
+                    LinearGradient(colors: [.yellow, Color(red: 1, green: 0.72, blue: 0.10)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+                .clipShape(Circle())
+            Text(label)
+                .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.80))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(Color.yellow.opacity(0.22))
+            .frame(width: 1, height: 46)
+    }
+
+    // MARK: - Play Now Button (pulsing CTA)
+
+    private var playNowButton: some View {
+        NavigationLink(destination: GameView()) {
+            HStack(spacing: 10) {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 17, weight: .bold))
+                Text("Play Now")
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+            }
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 1.00, green: 0.93, blue: 0.28),
+                        Color(red: 1.00, green: 0.68, blue: 0.05),
+                        Color(red: 1.00, green: 0.93, blue: 0.28)
+                    ],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(Capsule())
+            .shadow(
+                color: Color(red: 1, green: 0.75, blue: 0.10).opacity(ctaPulse ? 0.80 : 0.38),
+                radius: ctaPulse ? 28 : 14, y: 5
+            )
+        }
+    }
+
+    // MARK: - Footer
+
+    private var footerText: some View {
+        Text("Magic Show Arcade")
+            .font(.system(size: 10, weight: .medium))
+            .foregroundColor(.white.opacity(0.22))
+            .tracking(2.5)
+    }
+}
+
+// MARK: - Host Character (SwiftUI-drawn, App Store safe)
+
+/// Stylised Las Vegas female magician — upper body only.
+/// Top hat, elegant dress, one arm raised pointing toward the cups.
+private struct HostCharacterView: View {
+    let glowPulse: Bool
+
+    var body: some View {
+        ZStack {
+            // Soft purple aura
+            Circle()
+                .fill(Color(red: 0.45, green: 0.02, blue: 0.65).opacity(glowPulse ? 0.28 : 0.15))
+                .frame(width: 130, height: 130)
+                .blur(radius: 22)
+
+            // ── Dress / shoulders ──
+            Capsule()
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.64, green: 0.04, blue: 0.70), Color(red: 0.30, green: 0.02, blue: 0.48)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+                .frame(width: 58, height: 44)
+                .offset(y: 30)
+
+            // Gold neckline trim
+            Rectangle()
+                .fill(Color(red: 1, green: 0.80, blue: 0.22))
+                .frame(width: 58, height: 2.5)
+                .offset(y: 9)
+
+            // Neck
+            Capsule()
+                .fill(Color(red: 0.90, green: 0.76, blue: 0.62))
+                .frame(width: 9, height: 12)
+                .offset(y: 2)
+
+            // Head
+            Circle()
+                .fill(Color(red: 0.90, green: 0.76, blue: 0.62))
+                .frame(width: 28, height: 28)
+                .offset(y: -14)
+
+            // Hair (dark, swept back)
+            Ellipse()
+                .fill(Color(red: 0.18, green: 0.08, blue: 0.06))
+                .frame(width: 34, height: 26)
+                .offset(y: -16)
+
+            // Hair highlight
+            Capsule()
+                .fill(Color(red: 0.42, green: 0.20, blue: 0.14).opacity(0.55))
+                .frame(width: 5, height: 20)
+                .offset(x: -9, y: -15)
+
+            // Top hat brim
+            Capsule()
+                .fill(Color(red: 0.07, green: 0.03, blue: 0.18))
+                .frame(width: 42, height: 5)
+                .overlay(
+                    Capsule().strokeBorder(Color(red: 1, green: 0.80, blue: 0.22).opacity(0.60), lineWidth: 1)
+                )
+                .offset(y: -31)
+
+            // Top hat body
+            RoundedRectangle(cornerRadius: 3)
+                .fill(Color(red: 0.07, green: 0.03, blue: 0.18))
+                .frame(width: 26, height: 20)
+                .offset(y: -44)
+
+            // Gold hat band
+            Rectangle()
+                .fill(Color(red: 1, green: 0.80, blue: 0.22))
+                .frame(width: 26, height: 3)
+                .offset(y: -33)
+
+            // ── Right arm — raised, pointing down toward cups ──
+            Capsule()
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.64, green: 0.04, blue: 0.70), Color(red: 0.40, green: 0.02, blue: 0.50)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+                .frame(width: 8, height: 38)
+                .rotationEffect(.degrees(40))
+                .offset(x: 34, y: 18)
+
+            // Wand shaft
+            Rectangle()
+                .fill(Color(red: 0.14, green: 0.07, blue: 0.06))
+                .frame(width: 3, height: 22)
+                .rotationEffect(.degrees(40))
+                .offset(x: 49, y: 30)
+
+            // Wand star tip
+            Image(systemName: "star.fill")
+                .font(.system(size: 11))
+                .foregroundColor(.yellow)
+                .shadow(color: .yellow, radius: 5)
+                .offset(x: 57, y: 42)
+
+            // ── Left arm — relaxed at side ──
+            Capsule()
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.64, green: 0.04, blue: 0.70), Color(red: 0.40, green: 0.02, blue: 0.50)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+                .frame(width: 8, height: 28)
+                .rotationEffect(.degrees(-14))
+                .offset(x: -33, y: 20)
+        }
+        .compositingGroup()
+    }
+}
+
+// MARK: - Preview Cup
+
+private struct PreviewCupView: View {
+    let lit: Bool
+
+    var body: some View {
+        ZStack {
+            Canvas { ctx, size in
+                drawCup(ctx: ctx, size: size)
+            }
+            .frame(width: 74, height: 92)
+
+            // Shine strip on lit cup
+            if lit {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.white.opacity(0.18))
+                    .frame(width: 10, height: 52)
+                    .offset(x: -12, y: -4)
+            }
+        }
+        .shadow(
+            color: lit ? Color.yellow.opacity(0.60) : Color.black.opacity(0.55),
+            radius: lit ? 18 : 6, y: 4
+        )
+    }
+
+    private func drawCup(ctx: GraphicsContext, size: CGSize) {
+        let w    = size.width
+        let h    = size.height
+        let topW = w * 0.55
+        let topX = (w - topW) / 2
+        let gold = Color(red: 0.95, green: 0.80, blue: 0.22)
+
+        // Body (trapezoid)
+        var body = Path()
+        body.move(to:    CGPoint(x: topX + 2,        y: 10))
+        body.addLine(to: CGPoint(x: topX + topW - 2, y: 10))
+        body.addLine(to: CGPoint(x: w - 2,            y: h - 10))
+        body.addLine(to: CGPoint(x: 2,                y: h - 10))
+        body.closeSubpath()
+
+        let topColor = lit ? Color(red: 0.82, green: 0.08, blue: 0.10) : Color(red: 0.48, green: 0.04, blue: 0.06)
+        let botColor = lit ? Color(red: 1.00, green: 0.16, blue: 0.16) : Color(red: 0.72, green: 0.07, blue: 0.08)
+        ctx.fill(body, with: .linearGradient(
+            Gradient(colors: [topColor, botColor]),
+            startPoint: CGPoint(x: w * 0.5, y: 0),
+            endPoint:   CGPoint(x: w * 0.5, y: h)
+        ))
+
+        // Top rim
+        var topRim = Path()
+        topRim.addRoundedRect(
+            in: CGRect(x: topX - 2, y: 2, width: topW + 4, height: 10),
+            cornerSize: CGSize(width: 3, height: 3)
+        )
+        ctx.fill(topRim, with: .color(gold))
+
+        // Bottom rim / base
+        var botRim = Path()
+        botRim.addRoundedRect(
+            in: CGRect(x: 0, y: h - 12, width: w, height: 12),
+            cornerSize: CGSize(width: 4, height: 4)
+        )
+        ctx.fill(botRim, with: .color(gold))
+    }
+}
+
+// MARK: - Golden Ball
+
+private struct GoldenBallView: View {
+    let diameter: CGFloat
+    let glowPulse: Bool
+
+    var body: some View {
+        ZStack {
+            // Outer glow halo
+            Circle()
+                .fill(Color(red: 1, green: 0.80, blue: 0.10).opacity(glowPulse ? 0.60 : 0.28))
+                .frame(width: diameter * 1.9, height: diameter * 1.9)
+                .blur(radius: 7)
+
+            // Ball body — radial gold gradient
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color(red: 1.00, green: 0.98, blue: 0.72),
+                            Color(red: 1.00, green: 0.83, blue: 0.18),
+                            Color(red: 0.88, green: 0.58, blue: 0.04)
+                        ],
+                        center: UnitPoint(x: 0.34, y: 0.27),
+                        startRadius: 0,
+                        endRadius: diameter * 0.65
+                    )
+                )
+                .frame(width: diameter, height: diameter)
+
+            // Specular highlight
+            Circle()
+                .fill(Color.white.opacity(0.55))
+                .frame(width: diameter * 0.28, height: diameter * 0.28)
+                .offset(x: -diameter * 0.18, y: -diameter * 0.20)
+        }
+    }
+}
