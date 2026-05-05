@@ -139,6 +139,7 @@ struct ContentView: View {
                         reloadStats()
                     }
                 )
+                .interactiveDismissDisabled(true)
             }
             .onChange(of: showDuelLobby) { isShowing in
                 // Restart home ambient when competition fullScreenCover is dismissed
@@ -157,6 +158,7 @@ struct ContentView: View {
     }
 
     private func checkiCloudConflict() {
+        guard !showConflict else { return }
         let mgr = iCloudSyncManager.shared
         if mgr.hasConflict() {
             localSnap  = mgr.localSnapshot()
