@@ -243,6 +243,72 @@ final class GameState: ObservableObject {
     func consumeAdTrigger() {
         lossCount = 0
     }
+
+    /// Resets solo progression to L1 and awards a prestige badge.
+    /// Keeps: highScore, bestLevel, bestSurvival, bestGauntlet, score history.
+    func prestige() {
+        UserDefaults.standard.removeObject(forKey: PK.wins)
+        UserDefaults.standard.removeObject(forKey: PK.ftueDone)
+        prestigeCount += 1
+        UserDefaults.standard.set(prestigeCount, forKey: PK.prestige)
+        wins  = 0
+        level = 1
+        isFTUERound = true
+    }
+
+    // MARK: - Daily Challenge
+
+    /// UTC date string for today: "yyyy-MM-dd"
+    static var todayUTCString: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f.string(from: Date())
+    }
+
+    /// Deterministic seed for today's daily challenge (changes at UTC midnight).
+    static var dailySeed: UInt64 {
+        UInt64(floor(Date().timeIntervalSince1970 / 86400))
+    }
+
+    /// True if the player has already attempted today's daily challenge.
+    var isDailyAttempted: Bool {
+        UserDefaults.standard.bool(forKey: "cq_daily_\(GameState.todayUTCString)")
+    }
+
+    /// Records today's daily attempt result.
+    func recordDailyAttempt(won: Bool) {
+        let today = GameState.todayUTCString
+        UserDefaults.standard.set(true, forKey: "cq_daily_\(today)")
+
+        let lastDate = UserDefaults.standard.string(forKey: PK.dailyLastDate) ?? ""
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "UTC")
+        let yesterday = f.string(from: Date().addingTimeInterval(-86400))
+
+        if lastDate == yesterday {
+            dailyStreak += 1
+        } else if lastDate != today {
+            dailyStreak = 1
+        }
+        UserDefaults.standard.set(dailyStreak, forKey: PK.dailyStreak)
+        UserDefaults.standard.set(today, forKey: PK.dailyLastDate)
+    }
+
+    /// Daily mode variant — correctCupIndex is caller-supplied (seeded), not the internal random value.
+    func playerTappedCupDaily(_ cupIndex: Int, correctCup: Int) {
+        guard phase == .choosing else { return }
+        phase = .revealing
+        let correct = cupIndex == correctCup
+        isCorrect = correct
+        lastScoreDelta = correct ? 10 * 4 * 1 : 0
+        hostMessage = correct ? "You found it! 🎯" : HostMessages.lose.randomElement()!
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
+            guard self?.phase == .revealing else { return }
+            self?.phase = .result
+        }
+    }
 }
 
 // MARK: - Host Message Bank

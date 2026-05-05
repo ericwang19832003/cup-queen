@@ -260,6 +260,51 @@ final class LevelConfigTests: XCTestCase {
     }
 }
 
+// MARK: - Prestige Tests
+
+final class PrestigeTests: XCTestCase {
+    override func setUp()    { super.setUp(); clearGameDefaults() }
+    override func tearDown() { super.tearDown(); clearGameDefaults() }
+
+    func test_prestige_resetsLevelToOne() {
+        UserDefaults.standard.set(6, forKey: "cq_wins")
+        let state = GameState()
+        XCTAssertEqual(state.level, 7)
+        state.prestige()
+        let fresh = GameState()
+        XCTAssertEqual(fresh.level, 1)
+        XCTAssertEqual(fresh.wins, 0)
+    }
+
+    func test_prestige_keepsHighScore() {
+        UserDefaults.standard.set(500, forKey: "cq_highScore")
+        UserDefaults.standard.set(6, forKey: "cq_wins")
+        let state = GameState()
+        state.prestige()
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "cq_highScore"), 500)
+    }
+
+    func test_prestige_incrementsPrestigeCount() {
+        UserDefaults.standard.set(6, forKey: "cq_wins")
+        let state = GameState()
+        state.prestige()
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "cq_prestige"), 1)
+
+        UserDefaults.standard.set(6, forKey: "cq_wins")
+        let state2 = GameState()
+        state2.prestige()
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "cq_prestige"), 2)
+    }
+
+    func test_prestige_resetsFTUE() {
+        UserDefaults.standard.set(true, forKey: "cq_ftue_done")
+        UserDefaults.standard.set(6, forKey: "cq_wins")
+        let state = GameState()
+        state.prestige()
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: "cq_ftue_done"))
+    }
+}
+
 // MARK: - Gauntlet Tests
 
 final class GauntletTests: XCTestCase {
