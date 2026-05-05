@@ -38,6 +38,8 @@ private struct StarData: Identifiable {
 
 struct ContentView: View {
 
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var animateStars    = false
     @State private var glowPulse      = false
     @State private var ctaPulse       = false
@@ -46,6 +48,9 @@ struct ContentView: View {
     @State private var showDuelLobby = false
     @State private var showResetAlert = false
     @State private var showModes      = false
+    @State private var showConflict  = false
+    @State private var localSnap: [String: Any]  = [:]
+    @State private var remoteSnap: [String: Any] = [:]
 
     // Persisted best stats — read fresh each time view appears
     @State private var savedHighScore: Int = 0
@@ -114,12 +119,52 @@ struct ContentView: View {
                 savedPrestige     = UserDefaults.standard.integer(forKey: "cq_prestige")
                 modesUnlocked     = savedBestLevel >= 7
                 SoundManager.shared.startHomeAmbient()   // Feature 1: home screen jazz
+                checkiCloudConflict()
+            }
+            .onChange(of: scenePhase) { newPhase in
+                if newPhase == .active { checkiCloudConflict() }
+            }
+            .sheet(isPresented: $showConflict) {
+                iCloudConflictView(
+                    localSnapshot: localSnap,
+                    remoteSnapshot: remoteSnap,
+                    onKeepLocal: {
+                        iCloudSyncManager.shared.applyLocal()
+                        showConflict = false
+                        reloadStats()
+                    },
+                    onUseRemote: {
+                        iCloudSyncManager.shared.applyiCloud()
+                        showConflict = false
+                        reloadStats()
+                    }
+                )
             }
             .onChange(of: showDuelLobby) { isShowing in
                 // Restart home ambient when competition fullScreenCover is dismissed
                 // (ContentView stays in hierarchy during fullScreenCover so onAppear won't re-fire)
                 if !isShowing { SoundManager.shared.startHomeAmbient() }
             }
+        }
+    }
+
+    private func reloadStats() {
+        savedHighScore    = UserDefaults.standard.integer(forKey: "cq_highScore")
+        savedBestLevel    = max(1, UserDefaults.standard.integer(forKey: "cq_bestLevel"))
+        savedBestSurvival = UserDefaults.standard.integer(forKey: "cq_bestSurvival")
+        savedPrestige     = UserDefaults.standard.integer(forKey: "cq_prestige")
+        modesUnlocked     = savedBestLevel >= 7
+    }
+
+    private func checkiCloudConflict() {
+        let mgr = iCloudSyncManager.shared
+        if mgr.hasConflict() {
+            localSnap  = mgr.localSnapshot()
+            remoteSnap = mgr.remoteSnapshot()
+            showConflict = true
+        } else {
+            mgr.silentlyApplyRemoteIfNewer()
+            reloadStats()
         }
     }
 
