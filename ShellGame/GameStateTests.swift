@@ -20,7 +20,8 @@ extension GameState {
 /// Call in setUp() of any test class that creates a GameState().
 private func clearGameDefaults() {
     let keys = ["cq_wins", "cq_highScore", "cq_bestLevel", "cq_ftue_done",
-                "cq_bestSurvival", "cq_score_history"]
+                "cq_bestSurvival", "cq_score_history", "cq_best_gauntlet",
+                "cq_prestige", "cq_daily_streak", "cq_daily_last_date"]
     keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
 }
 
@@ -256,6 +257,51 @@ final class LevelConfigTests: XCTestCase {
         let cfg8  = LevelConfig.config(for: 8)
         let cfg7  = LevelConfig.config(for: 7)
         XCTAssertEqual(cfg8.swapCount, cfg7.swapCount)
+    }
+}
+
+// MARK: - Gauntlet Tests
+
+final class GauntletTests: XCTestCase {
+    override func setUp()    { super.setUp(); clearGameDefaults() }
+    override func tearDown() { super.tearDown(); clearGameDefaults() }
+
+    func test_gauntletWin_advancesGauntletLevel() {
+        let state = GameState(mode: .gauntlet)
+        state.advanceToChoosing()
+        state.playerTappedCup(state.correctCupIndex)
+        XCTAssertEqual(state.gauntletLevel, 2, "Win advances gauntlet level")
+        XCTAssertFalse(state.gauntletOver)
+        XCTAssertEqual(state.wins, 0, "Solo wins unaffected")
+    }
+
+    func test_gauntletLoss_endsRun() {
+        let state = GameState(mode: .gauntlet)
+        state.advanceToChoosing()
+        let wrong = (state.correctCupIndex + 1) % 3   // L1 has 3 cups
+        state.playerTappedCup(wrong)
+        XCTAssertTrue(state.gauntletOver)
+        XCTAssertFalse(state.gauntletComplete)
+        XCTAssertEqual(state.wins, 0, "Solo wins unaffected by gauntlet loss")
+    }
+
+    func test_gauntletComplete_after7Wins() {
+        let state = GameState(mode: .gauntlet)
+        for _ in 1...7 { simulateWin(state) }
+        XCTAssertTrue(state.gauntletComplete)
+        XCTAssertEqual(state.gauntletLevel, 8, "Level advances past 7 to signal completion")
+    }
+
+    func test_gauntletBestScore_persisted() {
+        let state = GameState(mode: .gauntlet)
+        simulateWins(state, count: 3)
+        let scoreAfter3 = state.score
+        XCTAssertGreaterThan(scoreAfter3, 0)
+        // Trigger run end via loss
+        state.advanceToChoosing()
+        let wrong = (state.correctCupIndex + 1) % 4
+        state.playerTappedCup(wrong)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "cq_best_gauntlet"), scoreAfter3)
     }
 }
 

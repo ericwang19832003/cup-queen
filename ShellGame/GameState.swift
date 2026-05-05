@@ -131,6 +131,48 @@ final class GameState: ObservableObject {
     /// - Parameter cupIndex: Identity index of the tapped cup node.
     func playerTappedCup(_ cupIndex: Int) {
         guard phase == .choosing else { return }
+
+        // --- Gauntlet mode ---
+        if mode == .gauntlet {
+            phase = .revealing
+            let correct = cupIndex == correctCupIndex
+            isCorrect = correct
+            if correct {
+                let multiplier = min(streak + 1, 4)
+                let delta = 10 * gauntletLevel * multiplier
+                lastScoreDelta = delta
+                score += delta
+                streak += 1
+                gauntletLevel += 1
+                if gauntletLevel > 7 {
+                    gauntletComplete = true
+                    gauntletOver = true
+                    if score > bestGauntlet {
+                        bestGauntlet = score
+                        UserDefaults.standard.set(bestGauntlet, forKey: PK.bestGauntlet)
+                    }
+                }
+                hostMessage = gauntletComplete
+                    ? "PERFECT RUN! 🏆"
+                    : HostMessages.win.randomElement()!
+            } else {
+                streak = 0
+                lastScoreDelta = 0
+                gauntletOver = true
+                if score > bestGauntlet {
+                    bestGauntlet = score
+                    UserDefaults.standard.set(bestGauntlet, forKey: PK.bestGauntlet)
+                }
+                hostMessage = HostMessages.lose.randomElement()!
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
+                guard self?.phase == .revealing else { return }
+                self?.phase = .result
+            }
+            return
+        }
+
+        // --- Solo / Daily mode ---
         phase = .revealing
 
         let correct = cupIndex == correctCupIndex
