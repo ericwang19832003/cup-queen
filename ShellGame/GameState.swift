@@ -105,7 +105,8 @@ final class GameState: ObservableObject {
             isFTUERound = false
             UserDefaults.standard.set(true, forKey: PK.ftueDone)
         }
-        correctCupIndex = Int.random(in: 0..<LevelConfig.config(for: level).cupCount)
+        let effectiveLevel = mode == .gauntlet ? gauntletLevel : level
+        correctCupIndex = Int.random(in: 0..<LevelConfig.config(for: effectiveLevel).cupCount)
         isCorrect = nil
         lastScoreDelta = 0
         leveledUp = false
