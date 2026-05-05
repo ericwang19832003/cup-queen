@@ -43,10 +43,16 @@ struct ContentView: View {
     @State private var ctaPulse       = false
     @State private var ballGlow       = false
     @State private var showGameCenter = false
+    @State private var showDuelLobby = false
+    @State private var showResetAlert = false
+    @State private var showModes      = false
 
     // Persisted best stats — read fresh each time view appears
     @State private var savedHighScore: Int = 0
     @State private var savedBestLevel: Int = 1
+    @State private var savedBestSurvival: Int = 0
+    @State private var savedPrestige: Int  = 0
+    @State private var modesUnlocked: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -78,17 +84,41 @@ struct ContentView: View {
                     playNowButton
                     Spacer().frame(height: 10)
 
+                    duelButton
+                    Spacer().frame(height: 8)
+
+                    modesButton
+                    Spacer().frame(height: 6)
+
                     footerText
+                    Spacer().frame(height: 6)
+
+                    resetProgressButton
                     Spacer().frame(height: 24)
                 }
                 .padding(.horizontal, 22)
             }
             .ignoresSafeArea(edges: .top)
             .sheet(isPresented: $showGameCenter) { GameCenterView() }
+            .fullScreenCover(isPresented: $showDuelLobby) {
+                CompetitionView()
+            }
+            .fullScreenCover(isPresented: $showModes) {
+                ModesView()
+            }
             .onAppear {
                 startAnimations()
-                savedHighScore = UserDefaults.standard.integer(forKey: "cq_highScore")
-                savedBestLevel = max(1, UserDefaults.standard.integer(forKey: "cq_bestLevel"))
+                savedHighScore    = UserDefaults.standard.integer(forKey: "cq_highScore")
+                savedBestLevel    = max(1, UserDefaults.standard.integer(forKey: "cq_bestLevel"))
+                savedBestSurvival = UserDefaults.standard.integer(forKey: "cq_bestSurvival")
+                savedPrestige     = UserDefaults.standard.integer(forKey: "cq_prestige")
+                modesUnlocked     = savedBestLevel >= 7
+                SoundManager.shared.startHomeAmbient()   // Feature 1: home screen jazz
+            }
+            .onChange(of: showDuelLobby) { isShowing in
+                // Restart home ambient when competition fullScreenCover is dismissed
+                // (ContentView stays in hierarchy during fullScreenCover so onAppear won't re-fire)
+                if !isShowing { SoundManager.shared.startHomeAmbient() }
             }
         }
     }
@@ -190,6 +220,17 @@ struct ContentView: View {
                 }
                 .offset(x: 4, y: 2)
             }
+
+            // Prestige crown badges — shown when savedPrestige > 0
+            if savedPrestige > 0 {
+                HStack(spacing: 1) {
+                    ForEach(0..<min(savedPrestige, 3), id: \.self) { _ in
+                        Text("👑").font(.system(size: 13))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 0)
+            }
         }
     }
 
@@ -226,14 +267,27 @@ struct ContentView: View {
     // MARK: - Best Stats Row
 
     private var bestStatsRow: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 5) {
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
-                Text("Level \(savedBestLevel)")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+        let isMaxLevel = savedBestLevel >= 7
+        return HStack(spacing: 12) {
+            if isMaxLevel && savedBestSurvival > 0 {
+                // L7 players: show survival streak instead of level
+                HStack(spacing: 5) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                    Text("Survived \(savedBestSurvival)")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+                }
+            } else {
+                HStack(spacing: 5) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                    Text("Level \(savedBestLevel)")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+                }
             }
             Rectangle()
                 .fill(Color.white.opacity(0.18))
@@ -435,13 +489,109 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Duel Button
+
+    private var duelButton: some View {
+        Button {
+            // Trigger auth if needed, then always open the lobby.
+            // CompetitionView handles the unauthenticated case gracefully.
+            if !GameCenterManager.shared.isAuthenticated {
+                GameCenterManager.shared.authenticate()
+            }
+            showDuelLobby = true
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: "swords")   // SF Symbol — avoids emoji font issues
+                    .font(.system(size: 15, weight: .semibold))
+                Text("Duel")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(Color(red: 1, green: 0.88, blue: 0.30))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.07))
+                    .overlay(
+                        Capsule().strokeBorder(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.55), Color.orange.opacity(0.35)],
+                                startPoint: .leading, endPoint: .trailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                    )
+            )
+        }
+    }
+
     // MARK: - Footer
+
+    private var modesButton: some View {
+        Button {
+            if modesUnlocked { showModes = true }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: modesUnlocked ? "star.circle.fill" : "lock.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text(modesUnlocked ? "✦ Modes" : "🔒 Unlock at Level 7")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(modesUnlocked
+                ? Color(red: 0.78, green: 0.58, blue: 1.00)
+                : .white.opacity(0.28))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .background(
+                Capsule()
+                    .fill(modesUnlocked
+                          ? Color(red: 0.35, green: 0.10, blue: 0.60).opacity(0.22)
+                          : Color.white.opacity(0.05))
+                    .overlay(Capsule().strokeBorder(
+                        modesUnlocked
+                            ? Color(red: 0.65, green: 0.40, blue: 1.00).opacity(0.45)
+                            : Color.white.opacity(0.10),
+                        lineWidth: 1.2))
+            )
+        }
+        .disabled(!modesUnlocked)
+    }
 
     private var footerText: some View {
         Text("Magic Show Arcade")
             .font(.system(size: 10, weight: .medium))
             .foregroundColor(.white.opacity(0.22))
             .tracking(2.5)
+    }
+
+    private var resetProgressButton: some View {
+        Button("Reset Progress") {
+            showResetAlert = true
+        }
+        .font(.system(size: 11, weight: .regular, design: .rounded))
+        .foregroundColor(.white.opacity(0.22))
+        .alert("Reset Progress?", isPresented: $showResetAlert) {
+            Button("Reset", role: .destructive) { resetProgress() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will clear your level, score, and all wins. You'll restart from Level 1.")
+        }
+    }
+
+    private func resetProgress() {
+        let ud = UserDefaults.standard
+        ud.removeObject(forKey: "cq_wins")
+        ud.removeObject(forKey: "cq_highScore")
+        ud.removeObject(forKey: "cq_bestLevel")
+        ud.removeObject(forKey: "cq_ftue_done")
+        ud.removeObject(forKey: "cq_bestSurvival")
+        ud.removeObject(forKey: "cq_prestige")
+        ScoreStore.shared.clear()
+        savedHighScore = 0
+        savedBestLevel = 1
+        savedBestSurvival = 0
+        savedPrestige = 0
+        modesUnlocked = false
     }
 }
 

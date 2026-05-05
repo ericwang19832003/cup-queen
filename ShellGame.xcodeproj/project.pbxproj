@@ -33,6 +33,15 @@
 		AA2000000000000000000006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000006 /* Assets.xcassets */; };
 		AA2000000000000000000007 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000008 /* SpriteKit.framework */; };
 		AA2000000000000000000008 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000009 /* SoundManager.swift */; };
+		AA2000000000000000000009 /* MatchState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000010 /* MatchState.swift */; };
+		AA2000000000000000000010 /* GameCenterMatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000011 /* GameCenterMatchManager.swift */; };
+		AA2000000000000000000011 /* CompetitionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000012 /* CompetitionView.swift */; };
+		AA2000000000000000000012 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000013 /* SplashView.swift */; };
+		AA2000000000000000000013 /* ScoreStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000014 /* ScoreStore.swift */; };
+		AA2000000000000000000014 /* ScoreboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000015 /* ScoreboardView.swift */; };
+		AA2000000000000000000015 /* ModesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000016 /* ModesView.swift */; };
+		AA2000000000000000000016 /* GauntletView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000017 /* GauntletView.swift */; };
+		AA2000000000000000000017 /* DailyChallengeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000018 /* DailyChallengeView.swift */; };
 		AB2000000000000000000001 /* GameStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000001 /* GameStateTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -46,6 +55,15 @@
 		AA1000000000000000000007 /* ShellGame.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShellGame.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA1000000000000000000008 /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = System/Library/Frameworks/SpriteKit.framework; sourceTree = SDKROOT; };
 		AA1000000000000000000009 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
+		AA1000000000000000000010 /* MatchState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchState.swift; sourceTree = "<group>"; };
+		AA1000000000000000000011 /* GameCenterMatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenterMatchManager.swift; sourceTree = "<group>"; };
+		AA1000000000000000000012 /* CompetitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompetitionView.swift; sourceTree = "<group>"; };
+		AA1000000000000000000013 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		AA1000000000000000000014 /* ScoreStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreStore.swift; sourceTree = "<group>"; };
+		AA1000000000000000000015 /* ScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreboardView.swift; sourceTree = "<group>"; };
+		AA1000000000000000000016 /* ModesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModesView.swift; sourceTree = "<group>"; };
+		AA1000000000000000000017 /* GauntletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GauntletView.swift; sourceTree = "<group>"; };
+		AA1000000000000000000018 /* DailyChallengeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyChallengeView.swift; sourceTree = "<group>"; };
 		AB1000000000000000000001 /* GameStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStateTests.swift; sourceTree = "<group>"; };
 		AB1000000000000000000002 /* ShellGameTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShellGameTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -78,6 +96,15 @@
 				AA1000000000000000000004 /* GameScene.swift */,
 				AA1000000000000000000005 /* GameState.swift */,
 				AA1000000000000000000009 /* SoundManager.swift */,
+				AA1000000000000000000010 /* MatchState.swift */,
+				AA1000000000000000000011 /* GameCenterMatchManager.swift */,
+				AA1000000000000000000012 /* CompetitionView.swift */,
+				AA1000000000000000000013 /* SplashView.swift */,
+				AA1000000000000000000014 /* ScoreStore.swift */,
+				AA1000000000000000000015 /* ScoreboardView.swift */,
+				AA1000000000000000000016 /* ModesView.swift */,
+				AA1000000000000000000017 /* GauntletView.swift */,
+				AA1000000000000000000018 /* DailyChallengeView.swift */,
 				AA1000000000000000000006 /* Assets.xcassets */,
 				AB3000000000000000000001 /* ShellGameTests */,
 				AA3000000000000000000002 /* Products */,
@@ -208,6 +235,15 @@
 				AA2000000000000000000004 /* GameScene.swift in Sources */,
 				AA2000000000000000000005 /* GameState.swift in Sources */,
 				AA2000000000000000000008 /* SoundManager.swift in Sources */,
+				AA2000000000000000000009 /* MatchState.swift in Sources */,
+				AA2000000000000000000010 /* GameCenterMatchManager.swift in Sources */,
+				AA2000000000000000000011 /* CompetitionView.swift in Sources */,
+				AA2000000000000000000012 /* SplashView.swift in Sources */,
+				AA2000000000000000000013 /* ScoreStore.swift in Sources */,
+				AA2000000000000000000014 /* ScoreboardView.swift in Sources */,
+				AA2000000000000000000015 /* ModesView.swift in Sources */,
+				AA2000000000000000000016 /* GauntletView.swift in Sources */,
+				AA2000000000000000000017 /* DailyChallengeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -343,8 +379,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 5LQWKL72G9;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -370,8 +406,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				CURRENT_PROJECT_VERSION = 8;
+				DEVELOPMENT_TEAM = 5LQWKL72G9;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -396,7 +432,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;
@@ -415,7 +451,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 1.0;

@@ -25,7 +25,7 @@ struct ShellGameApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .preferredColorScheme(.dark)
         }
     }
@@ -286,6 +286,34 @@ final class GameCenterManager {
                 )
             } catch {
                 print("GameCenter: survival submit failed — \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func submitGauntletScore(_ score: Int) {
+        guard isAuthenticated, score > 0 else { return }
+        Task {
+            do {
+                try await GKLeaderboard.submitScore(
+                    score, context: 0, player: GKLocalPlayer.local,
+                    leaderboardIDs: ["cq.leaderboard.gauntlet"]
+                )
+            } catch {
+                print("GameCenter: gauntlet submit failed — \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func submitDailyScore(_ score: Int) {
+        guard isAuthenticated else { return }
+        Task {
+            do {
+                try await GKLeaderboard.submitScore(
+                    score, context: 0, player: GKLocalPlayer.local,
+                    leaderboardIDs: ["cq.leaderboard.daily"]
+                )
+            } catch {
+                print("GameCenter: daily submit failed — \(error.localizedDescription)")
             }
         }
     }
