@@ -39,7 +39,7 @@ final class iCloudSyncManager {
         for key in Self.syncKeys {
             guard let remote = store.object(forKey: key),
                   let local  = UserDefaults.standard.object(forKey: key) else { continue }
-            if "\(remote)" != "\(local)" { return true }
+            if (remote as? NSObject)?.isEqual(local) != true { return true }
         }
         return false
     }
