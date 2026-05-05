@@ -21,7 +21,8 @@ extension GameState {
 private func clearGameDefaults() {
     let keys = ["cq_wins", "cq_highScore", "cq_bestLevel", "cq_ftue_done",
                 "cq_bestSurvival", "cq_score_history", "cq_best_gauntlet",
-                "cq_prestige", "cq_daily_streak", "cq_daily_last_date"]
+                "cq_prestige", "cq_daily_streak", "cq_daily_last_date",
+                "cq_daily_\(GameState.todayUTCString)"]
     keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
 }
 
@@ -257,6 +258,43 @@ final class LevelConfigTests: XCTestCase {
         let cfg8  = LevelConfig.config(for: 8)
         let cfg7  = LevelConfig.config(for: 7)
         XCTAssertEqual(cfg8.swapCount, cfg7.swapCount)
+    }
+}
+
+// MARK: - Daily Tests
+
+final class DailyTests: XCTestCase {
+    override func setUp()    { super.setUp(); clearGameDefaults() }
+    override func tearDown() { super.tearDown(); clearGameDefaults() }
+
+    func test_dailySeed_consistentWithinSameDay() {
+        let s1 = GameState.dailySeed
+        let s2 = GameState.dailySeed
+        XCTAssertEqual(s1, s2, "Same seed within the same day")
+    }
+
+    func test_isDailyAttempted_falseBeforeAttempt() {
+        let state = GameState()
+        XCTAssertFalse(state.isDailyAttempted)
+    }
+
+    func test_isDailyAttempted_trueAfterRecord() {
+        let state = GameState()
+        state.recordDailyAttempt(won: true)
+        XCTAssertTrue(state.isDailyAttempted)
+    }
+
+    func test_dailyStreak_incrementsOnConsecutiveDays() {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "UTC")
+        let yesterday = f.string(from: Date().addingTimeInterval(-86400))
+        UserDefaults.standard.set(yesterday, forKey: "cq_daily_last_date")
+        UserDefaults.standard.set(3, forKey: "cq_daily_streak")
+
+        let state = GameState()
+        state.recordDailyAttempt(won: true)
+        XCTAssertEqual(state.dailyStreak, 4, "Streak increments when previous day was also played")
     }
 }
 
