@@ -17,13 +17,26 @@ enum GamePhase: Equatable {
     case result      // Round over — show overlay
 }
 
+// MARK: - Game Mode
+
+enum GameMode {
+    case solo       // normal persistent play
+    case gauntlet   // single-life L1→L7 run, no persistence
+    case daily      // one fixed-seed round per day
+}
+
 // MARK: - Persistence Keys
 
 private enum PK {
-    static let wins      = "cq_wins"
-    static let highScore = "cq_highScore"
-    static let bestLevel = "cq_bestLevel"
-    static let ftueDone  = "cq_ftue_done"
+    static let wins         = "cq_wins"
+    static let highScore    = "cq_highScore"
+    static let bestLevel    = "cq_bestLevel"
+    static let ftueDone     = "cq_ftue_done"
+    static let bestSurvival = "cq_bestSurvival"
+    static let bestGauntlet = "cq_best_gauntlet"
+    static let prestige      = "cq_prestige"
+    static let dailyStreak   = "cq_daily_streak"
+    static let dailyLastDate = "cq_daily_last_date"
 }
 
 // MARK: - GameState
@@ -43,6 +56,19 @@ final class GameState: ObservableObject {
     // MARK: Persisted stats (read by ContentView home screen)
     @Published private(set) var highScore: Int = 0
     @Published private(set) var bestLevel: Int = 1
+    @Published private(set) var bestSurvival: Int = 0
+
+    // MARK: Gauntlet
+    @Published private(set) var gauntletLevel: Int = 1
+    @Published private(set) var gauntletOver: Bool = false
+    @Published private(set) var gauntletComplete: Bool = false
+    @Published private(set) var bestGauntlet: Int = 0
+
+    // MARK: Prestige
+    @Published private(set) var prestigeCount: Int = 0
+
+    // MARK: Daily
+    @Published private(set) var dailyStreak: Int = 0
 
     // MARK: Internal (read by GameScene / GameView)
     private(set) var correctCupIndex: Int = 0
@@ -52,15 +78,22 @@ final class GameState: ObservableObject {
 
     // MARK: Private
     private(set) var wins: Int = 0   // cumulative wins; never resets on loss
+    private let mode: GameMode
 
     // MARK: - Init
 
-    init() {
-        wins        = UserDefaults.standard.integer(forKey: PK.wins)
-        highScore   = UserDefaults.standard.integer(forKey: PK.highScore)
-        bestLevel   = max(1, UserDefaults.standard.integer(forKey: PK.bestLevel))
-        level       = min(wins + 1, 7)
-        isFTUERound = !UserDefaults.standard.bool(forKey: PK.ftueDone)
+    init(mode: GameMode = .solo) {
+        self.mode    = mode
+        wins         = UserDefaults.standard.integer(forKey: PK.wins)
+        highScore    = UserDefaults.standard.integer(forKey: PK.highScore)
+        bestLevel    = max(1, UserDefaults.standard.integer(forKey: PK.bestLevel))
+        bestSurvival = UserDefaults.standard.integer(forKey: PK.bestSurvival)
+        bestGauntlet = UserDefaults.standard.integer(forKey: PK.bestGauntlet)
+        prestigeCount = UserDefaults.standard.integer(forKey: PK.prestige)
+        dailyStreak   = UserDefaults.standard.integer(forKey: PK.dailyStreak)
+        // In non-solo modes, level always starts at 1 regardless of persisted wins
+        level        = mode == .solo ? min(wins + 1, 7) : 1
+        isFTUERound  = !UserDefaults.standard.bool(forKey: PK.ftueDone)
     }
 
     // MARK: - Round Lifecycle
@@ -133,6 +166,10 @@ final class GameState: ObservableObject {
                 leveledUp = false
                 if level == 7 {
                     survivalCount += 1
+                    if survivalCount > bestSurvival {
+                        bestSurvival = survivalCount
+                        UserDefaults.standard.set(bestSurvival, forKey: PK.bestSurvival)
+                    }
                     hostMessage = HostMessages.survival[min(survivalCount - 1, HostMessages.survival.count - 1)]
                 } else {
                     hostMessage = HostMessages.win.randomElement()!

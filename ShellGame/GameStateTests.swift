@@ -16,9 +16,20 @@ extension GameState {
     }
 }
 
+/// Wipes all persisted game keys so each test starts from a clean slate.
+/// Call in setUp() of any test class that creates a GameState().
+private func clearGameDefaults() {
+    let keys = ["cq_wins", "cq_highScore", "cq_bestLevel", "cq_ftue_done",
+                "cq_bestSurvival", "cq_score_history"]
+    keys.forEach { UserDefaults.standard.removeObject(forKey: $0) }
+}
+
 // MARK: - Level Progression
 
 final class LevelProgressionTests: XCTestCase {
+
+    override func setUp()    { super.setUp();    clearGameDefaults() }
+    override func tearDown() { super.tearDown(); clearGameDefaults() }
 
     func test_initialState() {
         let state = GameState()
@@ -60,6 +71,15 @@ final class LevelProgressionTests: XCTestCase {
         XCTAssertEqual(state.level, 7, "Level never exceeds 7")
     }
 
+    func test_gauntletMode_startsAtLevelOne_regardlessOfWins() {
+        UserDefaults.standard.set(6, forKey: "cq_wins")
+        let gauntlet = GameState(mode: .gauntlet)
+        XCTAssertEqual(gauntlet.level, 1, "Gauntlet always starts at L1")
+        XCTAssertEqual(gauntlet.gauntletLevel, 1)
+        XCTAssertFalse(gauntlet.gauntletOver)
+        XCTAssertFalse(gauntlet.gauntletComplete)
+    }
+
     func test_lossDoesNotResetWins() {
         let state = GameState()
         simulateWins(state, count: 4)   // 4 wins → level 5
@@ -75,6 +95,9 @@ final class LevelProgressionTests: XCTestCase {
 // MARK: - Scoring
 
 final class ScoringTests: XCTestCase {
+
+    override func setUp()    { super.setUp();    clearGameDefaults() }
+    override func tearDown() { super.tearDown(); clearGameDefaults() }
 
     func test_firstWin_scoreEqualsLevelTimesTen() {
         let state = GameState()
@@ -119,6 +142,9 @@ final class ScoringTests: XCTestCase {
 // MARK: - Phase Transitions
 
 final class PhaseTransitionTests: XCTestCase {
+
+    override func setUp()    { super.setUp();    clearGameDefaults() }
+    override func tearDown() { super.tearDown(); clearGameDefaults() }
 
     func test_beginRound_movesToPlacing() {
         let state = GameState()
