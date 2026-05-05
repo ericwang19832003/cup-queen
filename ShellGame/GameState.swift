@@ -226,6 +226,8 @@ final class GameState: ObservableObject {
             hostMessage = HostMessages.lose.randomElement()!
         }
 
+        iCloudSyncManager.shared.push()
+
         // Advance to result after reveal animation finishes (~1.8 s)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
             guard self?.phase == .revealing else { return }
@@ -252,6 +254,7 @@ final class GameState: ObservableObject {
         UserDefaults.standard.removeObject(forKey: PK.ftueDone)
         prestigeCount += 1
         UserDefaults.standard.set(prestigeCount, forKey: PK.prestige)
+        iCloudSyncManager.shared.push()
         wins  = 0
         level = 1
         isFTUERound = true
@@ -295,6 +298,7 @@ final class GameState: ObservableObject {
         }
         UserDefaults.standard.set(dailyStreak, forKey: PK.dailyStreak)
         UserDefaults.standard.set(today, forKey: PK.dailyLastDate)
+        iCloudSyncManager.shared.push()
     }
 
     /// Daily mode variant — correctCupIndex is caller-supplied (seeded), not the internal random value.
