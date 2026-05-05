@@ -64,6 +64,7 @@
 		AA1000000000000000000016 /* ModesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModesView.swift; sourceTree = "<group>"; };
 		AA1000000000000000000017 /* GauntletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GauntletView.swift; sourceTree = "<group>"; };
 		AA1000000000000000000018 /* DailyChallengeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyChallengeView.swift; sourceTree = "<group>"; };
+		AA100000000000000000001B /* ShellGame.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShellGame.entitlements; sourceTree = "<group>"; };
 		AB1000000000000000000001 /* GameStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStateTests.swift; sourceTree = "<group>"; };
 		AB1000000000000000000002 /* ShellGameTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShellGameTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -105,6 +106,7 @@
 				AA1000000000000000000016 /* ModesView.swift */,
 				AA1000000000000000000017 /* GauntletView.swift */,
 				AA1000000000000000000018 /* DailyChallengeView.swift */,
+				AA100000000000000000001B /* ShellGame.entitlements */,
 				AA1000000000000000000006 /* Assets.xcassets */,
 				AB3000000000000000000001 /* ShellGameTests */,
 				AA3000000000000000000002 /* Products */,
@@ -378,6 +380,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ShellGame/ShellGame.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 5LQWKL72G9;
@@ -405,6 +408,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ShellGame/ShellGame.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 5LQWKL72G9;
