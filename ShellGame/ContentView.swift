@@ -107,9 +107,8 @@ struct ContentView: View {
             }
             .ignoresSafeArea(edges: .top)
             .sheet(isPresented: $showGameCenter) { GameCenterView() }
-            .sheet(isPresented: $showNameEntry) {
+            .sheet(isPresented: $showNameEntry, onDismiss: { navigateToGame = false }) {
                 PlayerNameEntryView {
-                    showNameEntry  = false
                     navigateToGame = true
                 }
             }
