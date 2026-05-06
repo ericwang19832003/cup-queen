@@ -384,6 +384,6 @@ private enum HostMessages {
         "Level 26 — a true master! 👑",              // L26
         "Level 27 — legend status! 🌠",              // L27
         "Level 28 — two away from the top! 🔥",      // L28
-        "Level 29 — one step from glory! ✨",         // L29
+        "Level 29 — one step from glory! ✨",         // L29 + L30 (reused via min clamp)
     ]
 }
