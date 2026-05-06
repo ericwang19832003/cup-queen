@@ -52,6 +52,7 @@ struct ContentView: View {
     @State private var showNameEntry  = false
     @State private var navigateToGame = false
     @State private var showLeaderboard = false
+    @State private var playWasTapped   = false
     @State private var localSnap: [String: Any]  = [:]
     @State private var remoteSnap: [String: Any] = [:]
 
@@ -111,9 +112,15 @@ struct ContentView: View {
             }
             .ignoresSafeArea(edges: .top)
             .sheet(isPresented: $showGameCenter) { GameCenterView() }
-            .sheet(isPresented: $showNameEntry, onDismiss: { navigateToGame = false }) {
-                PlayerNameEntryView {
+            .sheet(isPresented: $showNameEntry, onDismiss: {
+                if playWasTapped {
                     navigateToGame = true
+                    playWasTapped = false
+                }
+            }) {
+                PlayerNameEntryView {
+                    playWasTapped = true
+                    showNameEntry = false
                 }
             }
             .navigationDestination(isPresented: $navigateToGame) {

@@ -12,7 +12,7 @@ struct LeaderboardEntry: Identifiable, Decodable {
     let score: Int
     let mode: String
     let level: Int
-    let createdAt: Date
+    let createdAt: String   // ISO-8601 string; not displayed
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -166,9 +166,7 @@ struct LeaderboardView: View {
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
             throw URLError(.badServerResponse)
         }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode([LeaderboardEntry].self, from: data)
+        return try JSONDecoder().decode([LeaderboardEntry].self, from: data)
     }
 }
 

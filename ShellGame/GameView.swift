@@ -155,7 +155,9 @@ struct GameView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
             scene?.isPaused = true
-            submitSessionScores()
+            // Game Center is idempotent — safe to call on background
+            GameCenterManager.shared.submitHighScore(gameState.highScore)
+            GameCenterManager.shared.submitSurvivalCount(gameState.survivalCount)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             scene?.isPaused = false
