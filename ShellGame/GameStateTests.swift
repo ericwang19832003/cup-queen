@@ -455,3 +455,49 @@ private func simulateLoss(_ state: GameState) {
 private func simulateWins(_ state: GameState, count: Int) {
     for _ in 0..<count { simulateWin(state) }
 }
+
+// MARK: - ScoreQueueTests
+
+final class ScoreQueueTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        // Start every test with an empty queue
+        UserDefaults.standard.removeObject(forKey: "cq_pending_scores")
+    }
+
+    func test_enqueue_addsEntryToQueue() {
+        let entry: [String: Any] = [
+            "player_name": "Alice",
+            "score": 500,
+            "mode": "solo",
+            "level": 3
+        ]
+        ScoreSubmissionService.shared.enqueue(entry)
+        let queue = UserDefaults.standard.array(forKey: "cq_pending_scores") as? [[String: Any]]
+        XCTAssertEqual(queue?.count, 1)
+        XCTAssertEqual(queue?.first?["player_name"] as? String, "Alice")
+    }
+
+    func test_enqueue_preservesOrder() {
+        ScoreSubmissionService.shared.enqueue(["player_name": "A", "score": 100, "mode": "solo", "level": 1])
+        ScoreSubmissionService.shared.enqueue(["player_name": "B", "score": 200, "mode": "solo", "level": 2])
+        let queue = UserDefaults.standard.array(forKey: "cq_pending_scores") as? [[String: Any]]
+        XCTAssertEqual(queue?.first?["player_name"] as? String, "A")
+        XCTAssertEqual(queue?.last?["player_name"]  as? String, "B")
+    }
+
+    func test_dequeue_removesFirstEntry() {
+        ScoreSubmissionService.shared.enqueue(["player_name": "A", "score": 100, "mode": "solo", "level": 1])
+        ScoreSubmissionService.shared.enqueue(["player_name": "B", "score": 200, "mode": "solo", "level": 2])
+        let first = ScoreSubmissionService.shared.dequeue()
+        XCTAssertEqual(first?["player_name"] as? String, "A")
+        let queue = UserDefaults.standard.array(forKey: "cq_pending_scores") as? [[String: Any]]
+        XCTAssertEqual(queue?.count, 1)
+    }
+
+    func test_dequeue_returnsNilWhenEmpty() {
+        let result = ScoreSubmissionService.shared.dequeue()
+        XCTAssertNil(result)
+    }
+}
