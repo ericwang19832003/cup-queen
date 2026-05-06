@@ -49,6 +49,8 @@ struct ContentView: View {
     @State private var showResetAlert = false
     @State private var showModes      = false
     @State private var showConflict  = false
+    @State private var showNameEntry  = false
+    @State private var navigateToGame = false
     @State private var localSnap: [String: Any]  = [:]
     @State private var remoteSnap: [String: Any] = [:]
 
@@ -105,6 +107,15 @@ struct ContentView: View {
             }
             .ignoresSafeArea(edges: .top)
             .sheet(isPresented: $showGameCenter) { GameCenterView() }
+            .sheet(isPresented: $showNameEntry) {
+                PlayerNameEntryView {
+                    showNameEntry  = false
+                    navigateToGame = true
+                }
+            }
+            .navigationDestination(isPresented: $navigateToGame) {
+                GameView()
+            }
             .fullScreenCover(isPresented: $showDuelLobby) {
                 CompetitionView()
             }
@@ -508,7 +519,9 @@ struct ContentView: View {
     // MARK: - Play Now Button (pulsing CTA)
 
     private var playNowButton: some View {
-        NavigationLink(destination: GameView()) {
+        Button {
+            showNameEntry = true
+        } label: {
             HStack(spacing: 10) {
                 Image(systemName: "play.fill")
                     .font(.system(size: 17, weight: .bold))
