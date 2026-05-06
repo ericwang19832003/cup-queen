@@ -227,6 +227,13 @@ final class LevelConfigTests: XCTestCase {
         XCTAssertTrue(cfg.hasGhostEffect, "L11 introduces ghost transparency")
     }
 
+    func test_level16And17GhostEffectReset() {
+        // 5-cup intro grace period: ghost turns off for L16–17 to ease the transition
+        XCTAssertFalse(LevelConfig.config(for: 16).hasGhostEffect, "L16 grace: ghost off")
+        XCTAssertFalse(LevelConfig.config(for: 17).hasGhostEffect, "L17 grace: ghost off")
+        XCTAssertTrue(LevelConfig.config(for: 18).hasGhostEffect,  "L18 ghost resumes")
+    }
+
     func test_level16HasFiveCups() {
         let cfg = LevelConfig.config(for: 16)
         XCTAssertEqual(cfg.cupCount, 5, "L16 introduces the 5th cup")

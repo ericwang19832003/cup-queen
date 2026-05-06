@@ -39,12 +39,12 @@ protocol ShellGameSceneDelegate: AnyObject {
 
 /// Per-level difficulty parameters. All game mechanic decisions flow from here.
 struct LevelConfig {
-    let cupCount: Int          // 3 cups (L1 only) → 4 cups (L2+)
+    let cupCount: Int          // 3 cups (L1–3) → 4 cups (L4–15) → 5 cups (L16–30)
     let swapCount: Int
     let swapDuration: Double
     let arcHeight: CGFloat
-    let hasMidPause: Bool      // Fake-out pause at shuffle midpoint (L3+)
-    let hasGhostEffect: Bool   // Cups dim during shuffle (L5+)
+    let hasMidPause: Bool      // Fake-out pause at shuffle midpoint (L6+)
+    let hasGhostEffect: Bool   // Cups dim during shuffle (L11+; resets at L16–17)
 
     /// X-positions of the cup slots for this cup count.
     var slotXPositions: [CGFloat] {
@@ -532,7 +532,7 @@ final class GameScene: SKScene {
     private func runSwapChain(_ pairs: [(Int, Int)], index: Int, config: LevelConfig, done: @escaping () -> Void) {
         guard index < pairs.count else { done(); return }
 
-        // Mid-pause fake-out: after the midpoint swap, hold for 0.55s before resuming (L3+)
+        // Mid-pause fake-out: after the midpoint swap, hold for 0.55s before resuming (L6+)
         let isMidPoint = config.hasMidPause && index == pairs.count / 2
         let interDelay = isMidPoint ? 0.55 : config.swapDuration * 0.15
 
