@@ -88,7 +88,7 @@ struct PlayerNameEntryView: View {
         }
         .onAppear {
             name = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
-            let wins = UserDefaults.standard.integer(forKey: "cq_wins")
+            let wins = UserDefaults.standard.integer(forKey: PK.wins)
             savedLevel = min(wins + 1, 30)
         }
         .presentationDetents([.height(360)])
