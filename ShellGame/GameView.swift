@@ -20,6 +20,7 @@ struct GameView: View {
     @State       private var levelUpAutoTask:   Task<Void, Never>? = nil   // auto-advances after level-up
     @State       private var showScoreboard: Bool = false
     @State       private var sessionEntryID: UUID? = nil
+    @State       private var hasSubmittedSession: Bool = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -600,6 +601,8 @@ struct GameView: View {
     }
 
     private func submitSessionScores() {
+        guard gameState.score > 0, !hasSubmittedSession else { return }
+        hasSubmittedSession = true
         GameCenterManager.shared.submitHighScore(gameState.highScore)
         GameCenterManager.shared.submitSurvivalCount(gameState.survivalCount)
 
