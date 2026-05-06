@@ -29,10 +29,11 @@ struct LeaderboardView: View {
     @State private var entries: [LeaderboardEntry] = []
     @State private var isLoading = false
     @State private var selectedMode = "all"
+    @State private var fetchErrorMessage: String? = nil
     @Environment(\.dismiss) private var dismiss
 
     private let modes = [("all", "All"), ("solo", "Solo"), ("gauntlet", "Gauntlet"), ("daily", "Daily")]
-    private let myName = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
+    @AppStorage("cq_player_name") private var myName: String = ""
 
     var body: some View {
         ZStack {
@@ -55,7 +56,7 @@ struct LeaderboardView: View {
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                     Spacer()
-                    Image(systemName: "chevron.left").opacity(0)   // balance
+                    Color.clear.frame(width: 32, height: 16)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -89,6 +90,18 @@ struct LeaderboardView: View {
                     Spacer()
                     ProgressView().tint(.yellow)
                     Spacer()
+                } else if let errorMsg = fetchErrorMessage {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white.opacity(0.40))
+                        Text(errorMsg)
+                            .font(.system(size: 14, design: .rounded))
+                            .foregroundColor(.white.opacity(0.45))
+                            .multilineTextAlignment(.center)
+                    }
+                    Spacer()
                 } else if entries.isEmpty {
                     Spacer()
                     Text("No scores yet. Be the first!")
@@ -119,12 +132,20 @@ struct LeaderboardView: View {
 
     private func loadEntries() async {
         isLoading = true
+        fetchErrorMessage = nil
         defer { isLoading = false }
-        entries = (try? await fetchEntries(mode: selectedMode)) ?? []
+        do {
+            entries = try await fetchEntries(mode: selectedMode)
+        } catch {
+            fetchErrorMessage = "Couldn't load scores. Pull to retry."
+            entries = []
+        }
     }
 
     private func fetchEntries(mode: String) async throws -> [LeaderboardEntry] {
-        var components = URLComponents(string: "\(SupabaseConfig.url)/rest/v1/scores")!
+        guard var components = URLComponents(string: "\(SupabaseConfig.url)/rest/v1/scores") else {
+            throw URLError(.badURL)
+        }
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "select", value: "id,player_name,score,mode,level,created_at"),
             URLQueryItem(name: "order",  value: "score.desc"),
@@ -135,12 +156,16 @@ struct LeaderboardView: View {
         }
         components.queryItems = queryItems
 
-        var request = URLRequest(url: components.url!)
+        guard let url = components.url else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
         request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw URLError(.badServerResponse)
+        }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode([LeaderboardEntry].self, from: data)
