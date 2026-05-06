@@ -129,7 +129,7 @@ final class GameScene: SKScene {
     weak var shellDelegate: ShellGameSceneDelegate?
     var level: Int = 1
     var isFTUERound: Bool = false    // set by GameView before performShuffle
-    var survivalBonus: Int = 0       // extra swaps at L7; capped at 12
+    var survivalBonus: Int = 0       // extra swaps at L30; capped at 12
     /// When set, shuffle pairs are generated deterministically from this seed.
     /// Used in competition mode so both devices produce identical shuffles.
     /// Cleared after each shuffle (GameView sets it before each round).
@@ -487,8 +487,8 @@ final class GameScene: SKScene {
             isFTUERound = false   // consume — never slows down again this session
         }
 
-        // Endless mode: each L7 survival win adds 1 extra swap, capped at +12 (35 total)
-        if level == 7 && survivalBonus > 0 {
+        // Endless mode: each L30 survival win adds 1 extra swap, capped at +12 (35 total)
+        if level == 30 && survivalBonus > 0 {
             let bonus = min(survivalBonus, 12)
             config = LevelConfig(cupCount: config.cupCount,
                                  swapCount: config.swapCount + bonus,

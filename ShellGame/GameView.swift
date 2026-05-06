@@ -16,7 +16,10 @@ struct GameView: View {
     @State       private var showLevelUp:    Bool = false
     @State       private var watchCueVisible: Bool = false
     @State       private var hintVisible:    Bool = false
-    @State       private var hintTask:       Task<Void, Never>? = nil
+    @State       private var hintTask:          Task<Void, Never>? = nil
+    @State       private var levelUpAutoTask:   Task<Void, Never>? = nil   // auto-advances after level-up
+    @State       private var showScoreboard: Bool = false
+    @State       private var sessionEntryID: UUID? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -82,6 +85,8 @@ struct GameView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
+                    levelUpAutoTask?.cancel()
+                    levelUpAutoTask = nil
                     submitSessionScores()
                     SoundManager.shared.stopAmbient()
                     dismiss()
@@ -94,6 +99,13 @@ struct GameView: View {
         }
         .onAppear(perform: setupScene)
         .onChange(of: gameState.phase) { newPhase in
+            // Feature 4 + 5: phase-reactive music — shuffle percussion, choosing tension, L30 survival
+            if newPhase == .shuffling && gameState.level == 30 && gameState.survivalCount >= 2 {
+                SoundManager.shared.updateSurvivalCount(gameState.survivalCount)
+            } else {
+                SoundManager.shared.updatePhase(newPhase)
+            }
+
             // Hint timer: start 2s countdown on .choosing; cancel on any other phase
             hintTask?.cancel()
             hintTask = nil
@@ -152,6 +164,21 @@ struct GameView: View {
                 gameState.resetToIdle()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) { startRound() }
             }
+        }
+        .fullScreenCover(isPresented: $showScoreboard) {
+            ScoreboardView(
+                sessionScore:    gameState.score,
+                sessionLevel:    gameState.level,
+                sessionSurvival: gameState.survivalCount,
+                sessionEntryID:  sessionEntryID,
+                onHome: {
+                    showScoreboard = false
+                    // Small delay so the cover dismiss animation completes before nav pop
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        dismiss()
+                    }
+                }
+            )
         }
     }
 
@@ -311,7 +338,11 @@ struct GameView: View {
             hudDivider
             hudCell(label: "STREAK", value: formattedStreak)
             hudDivider
-            hudCell(label: "LEVEL",  value: "L\(gameState.level)")
+            if gameState.level == 30 {
+                hudCell(label: "SURVIVED", value: "\(gameState.survivalCount)")
+            } else {
+                hudCell(label: "LEVEL", value: "L\(gameState.level)")
+            }
         }
         .padding(.vertical, 14)
         .background(
@@ -365,7 +396,7 @@ struct GameView: View {
         // Derive display state from published values
         let isWin      = gameState.isCorrect == true
         let isLevelUp  = gameState.leveledUp
-        let isMaxLevel = gameState.level == 7
+        let isMaxLevel = gameState.level == 30
 
         let emoji     = isLevelUp ? "🎊" : isWin ? "✨" : "😮"
         let headline  = isLevelUp ? "Level Up!" : isWin ? "You Found It!" : "Not Quite!"
@@ -384,6 +415,15 @@ struct GameView: View {
                     if !isWin && gameState.lossCount >= 3 {
                         gameState.consumeAdTrigger()
                         Task { await AdManager.shared.requestATTThenShowInterstitial() }
+                    }
+                    // Auto-advance to next level after 2s on level-up (no tap required)
+                    if isLevelUp {
+                        levelUpAutoTask?.cancel()
+                        levelUpAutoTask = Task {
+                            try? await Task.sleep(nanoseconds: 2_000_000_000)
+                            guard !Task.isCancelled else { return }
+                            await MainActor.run { handlePlayAgain() }
+                        }
                     }
                 }
 
@@ -427,8 +467,8 @@ struct GameView: View {
                         .clipShape(Capsule())
                 }
 
-                // Endless mode survival badge (L7 wins)
-                if isWin && gameState.level == 7 && gameState.survivalCount > 0 {
+                // Endless mode survival badge (L30 wins)
+                if isWin && gameState.level == 30 && gameState.survivalCount > 0 {
                     HStack(spacing: 5) {
                         Image(systemName: "crown.fill")
                             .font(.system(size: 13))
@@ -463,9 +503,20 @@ struct GameView: View {
                 }
 
                 Button("Main Menu") {
+                    levelUpAutoTask?.cancel()
+                    levelUpAutoTask = nil
                     submitSessionScores()
                     SoundManager.shared.stopAmbient()
-                    dismiss()
+                    if gameState.score > 0 {
+                        sessionEntryID = ScoreStore.shared.save(
+                            score: gameState.score,
+                            level: gameState.level,
+                            survivalCount: gameState.survivalCount
+                        )
+                        showScoreboard = true
+                    } else {
+                        dismiss()
+                    }
                 }
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundColor(.white.opacity(0.55))
@@ -518,12 +569,13 @@ struct GameView: View {
 
     private func setupScene() {
         let s = GameScene(size: CGSize(width: 390, height: 310))
+        s.level = gameState.level   // must be set before didMove(to:) so cups are built for the right level
         let coord = Coordinator(gameState: gameState, scene: s)
         s.shellDelegate = coord
         coordinator = coord
         scene = s
 
-        SoundManager.shared.startAmbient()
+        SoundManager.shared.startGameAmbient(level: gameState.level)   // Feature 2
 
         // First round starts after the scene has a moment to settle
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
@@ -542,6 +594,8 @@ struct GameView: View {
         scene?.level = gameState.level
         scene?.isFTUERound = isFTUE
         scene?.survivalBonus = gameState.survivalCount
+        // Feature 2: switch music tier if level crossed a boundary (no-op if same tier)
+        SoundManager.shared.startGameAmbient(level: gameState.level)
         scene?.placeBall(atCupIndex: gameState.correctCupIndex)
     }
 
@@ -551,6 +605,8 @@ struct GameView: View {
     }
 
     private func handlePlayAgain() {
+        levelUpAutoTask?.cancel()
+        levelUpAutoTask = nil
         scene?.level = gameState.level
         scene?.resetForNewRound()
         gameState.resetToIdle()

@@ -355,13 +355,35 @@ private enum HostMessages {
         "You're in the 1% of the 1%! 👑"
     ]
 
-    /// One entry per level-up event: entering L2…L7 (indices 0–5)
+    /// One entry per level-up event: entering L2…L30 (indices 0–28)
     static let levelUp = [
-        "You're warming up — Level 2! 🔥",
-        "Getting tricky! Level 3 now! 💫",
-        "Expert territory! Level 4! 👀",
-        "Master class! Level 5 — brace yourself! ⚡",
-        "Legendary! Only few reach Level 6! 🌟",
-        "Level 7 — only 1% ever get here! 👑"
+        "You're warming up — Level 2! 🔥",          // L2
+        "Getting tricky! Level 3 now! 💫",           // L3
+        "Expert territory! Level 4! 👀",             // L4
+        "Master class! Level 5 — brace yourself! ⚡", // L5
+        "Legendary! Only few reach Level 6! 🌟",     // L6
+        "Level 7 — you're on a roll! 🎯",            // L7
+        "Level 8 — the 4-cup gauntlet begins! 🏆",   // L8
+        "Level 9 — eyes like a hawk! 🦅",            // L9
+        "Level 10 — double digits! Impressive! 🔟",  // L10
+        "Level 11 — the ghost effect kicks in! 👻",  // L11
+        "Level 12 — barely blink! 💨",               // L12
+        "Level 13 — unlucky? Not you! 🍀",           // L13
+        "Level 14 — near-superhuman! ⚡",             // L14
+        "Level 15 — last of the 4-cup tier! 🔥",     // L15
+        "Level 16 — FIVE CUPS! 🖐️ New challenge!",  // L16
+        "Level 17 — five cups and counting! 👁️",    // L17
+        "Level 18 — ghost cups return! 👻🖐️",       // L18
+        "Level 19 — elite territory! 🌟",            // L19
+        "Level 20 — halfway to legend! 🏅",          // L20
+        "Level 21 — only 5% reach here! 🎖️",        // L21
+        "Level 22 — machine-like precision! 🤖",     // L22
+        "Level 23 — almost inhuman! ⚡",              // L23
+        "Level 24 — the 1% zone! 💎",                // L24
+        "Level 25 — quarter-century of cups! 🏆",    // L25
+        "Level 26 — a true master! 👑",              // L26
+        "Level 27 — legend status! 🌠",              // L27
+        "Level 28 — two away from the top! 🔥",      // L28
+        "Level 29 — one step from glory! ✨",         // L29
     ]
 }

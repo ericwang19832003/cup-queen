@@ -314,10 +314,10 @@ struct ContentView: View {
     // MARK: - Best Stats Row
 
     private var bestStatsRow: some View {
-        let isMaxLevel = savedBestLevel >= 7
+        let isMaxLevel = savedBestLevel >= 30
         return HStack(spacing: 12) {
             if isMaxLevel && savedBestSurvival > 0 {
-                // L7 players: show survival streak instead of level
+                // L30 players: show survival streak instead of level
                 HStack(spacing: 5) {
                     Image(systemName: "crown.fill")
                         .font(.system(size: 11, weight: .bold))
