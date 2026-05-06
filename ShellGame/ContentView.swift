@@ -117,8 +117,10 @@ struct ContentView: View {
                 if playWasTapped {
                     navigateToGame = true
                     playWasTapped = false
+                    // startFreshSelected intentionally kept — GameView reads it next
+                } else {
+                    startFreshSelected = false  // dismissed without playing; reset for next time
                 }
-                startFreshSelected = false
             }) {
                 PlayerNameEntryView { startFresh in
                     startFreshSelected = startFresh
