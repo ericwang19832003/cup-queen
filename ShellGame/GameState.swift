@@ -181,7 +181,14 @@ final class GameState: ObservableObject {
 
         if correct {
             let multiplier = min(streak + 1, 4)          // max 4× streak bonus
-            let delta = 10 * level * multiplier
+            let cupBase: Int = {
+                switch LevelConfig.config(for: level).cupCount {
+                case 5:  return 17   // 5-cup tier: 1.7× base
+                case 4:  return 13   // 4-cup tier: 1.3× base
+                default: return 10   // 3-cup tier: 1.0× base
+                }
+            }()
+            let delta = cupBase * level * multiplier
             lastScoreDelta = delta
             score += delta
             streak += 1

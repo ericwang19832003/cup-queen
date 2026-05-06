@@ -99,32 +99,50 @@ final class ScoringTests: XCTestCase {
     override func setUp()    { super.setUp();    clearGameDefaults() }
     override func tearDown() { super.tearDown(); clearGameDefaults() }
 
-    func test_firstWin_scoreEqualsLevelTimesTen() {
+    func test_firstWin_L1_score() {
         let state = GameState()
         state.advanceToChoosing()
         state.playerTappedCup(state.correctCupIndex)
-
-        // L1, multiplier = min(0+1, 4) = 1  →  10 * 1 * 1 = 10
+        // L1: 3 cups → cupBase=10, level=1, streakMult=1  →  10*1*1 = 10
         XCTAssertEqual(state.lastScoreDelta, 10)
         XCTAssertEqual(state.score,          10)
     }
 
+    func test_fourCupLevel_usesHigherBase() {
+        // 4 wins: wins 1-3 at L1-L3 (3-cup), win 4 at L4 (4-cup tier)
+        // Win 4: level=4, streak=3, streakMult=min(4,4)=4  →  13*4*4 = 208
+        let state = GameState()
+        simulateWins(state, count: 4)
+        XCTAssertEqual(state.level, 5)
+        // cupBase=13, level=4, streakMult=4  →  13*4*4 = 208
+        XCTAssertEqual(state.lastScoreDelta, 208)
+    }
+
+    func test_fiveCupLevel_usesHighestBase() {
+        // 16 wins: wins 1-15 at L1-L15, win 16 at L16 (5-cup tier)
+        // Win 16: level=16, streak=15 → capped at 4  →  17*16*4 = 1088
+        let state = GameState()
+        simulateWins(state, count: 16)
+        XCTAssertEqual(state.level, 17)
+        // cupBase=17, level=16, streakMult=4  →  17*16*4 = 1088
+        XCTAssertEqual(state.lastScoreDelta, 1088)
+    }
+
     func test_streakMultiplier_capsAtFourX() {
         let state = GameState()
-        // Win 4 times consecutively; multiplier caps at 4
-        for _ in 0..<4 { simulateWin(state) }
-        // After 4 wins: streak=4, multiplier=min(4,4)=4, still level 2 (4/2+1=3? actually wins=4, level=3)
-        // Let's just verify multiplier doesn't exceed 4x
-        XCTAssertLessThanOrEqual(state.lastScoreDelta, 10 * state.level * 4)
+        simulateWins(state, count: 10)
+        let cup = LevelConfig.config(for: state.level).cupCount
+        let expectedBase = cup == 5 ? 17 : cup == 4 ? 13 : 10
+        XCTAssertLessThanOrEqual(state.lastScoreDelta, expectedBase * state.level * 4,
+            "Score delta never exceeds cupBase * level * 4")
     }
 
     func test_lossResetsStreak() {
         let state = GameState()
         simulateWins(state, count: 3)
         XCTAssertEqual(state.streak, 3)
-
         simulateLoss(state)
-        XCTAssertEqual(state.streak, 0, "Streak resets to 0 after a loss")
+        XCTAssertEqual(state.streak, 0)
         XCTAssertEqual(state.lastScoreDelta, 0)
     }
 
@@ -133,9 +151,8 @@ final class ScoringTests: XCTestCase {
         simulateWin(state)
         let scoreAfterOne = state.score
         XCTAssertGreaterThan(scoreAfterOne, 0)
-
         simulateWin(state)
-        XCTAssertGreaterThan(state.score, scoreAfterOne, "Score accumulates each round")
+        XCTAssertGreaterThan(state.score, scoreAfterOne)
     }
 }
 
