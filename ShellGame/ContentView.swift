@@ -1060,3 +1060,81 @@ private struct HomeProgressCard: View {
         )
     }
 }
+
+// MARK: - Idle Cups View (returning player)
+
+private struct IdleCupsView: View {
+    @State private var leftY:   CGFloat = 0
+    @State private var centreY: CGFloat = 0
+    @State private var rightY:  CGFloat = 0
+    @State private var glowPulse = false
+    @State private var ballGlow  = false
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // Spotlight
+            Ellipse()
+                .fill(Color.yellow.opacity(glowPulse ? 0.20 : 0.09))
+                .frame(width: 96, height: 28)
+                .blur(radius: 10)
+                .offset(y: -12)
+
+            // Felt strip
+            RoundedRectangle(cornerRadius: 6)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.08, green: 0.28, blue: 0.14),
+                                 Color(red: 0.05, green: 0.18, blue: 0.09)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .frame(maxWidth: .infinity, maxHeight: 12)
+                .padding(.horizontal, 8)
+                .shadow(color: .black.opacity(0.55), radius: 8, y: 4)
+
+            // Cups + ball
+            HStack(spacing: 20) {
+                PreviewCupView(lit: false)
+                    .offset(y: leftY)
+                ZStack(alignment: .bottom) {
+                    PreviewCupView(lit: true)
+                        .offset(y: centreY)
+                    GoldenBallView(diameter: 26, glowPulse: ballGlow)
+                        .offset(y: centreY + 18)
+                }
+                PreviewCupView(lit: false)
+                    .offset(y: rightY)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 14)
+        }
+        .onAppear {
+            // Ball glow
+            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                ballGlow = true
+            }
+            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
+                glowPulse = true
+            }
+            // Staggered bob: left → centre → right, 3s total loop
+            startBobLoop()
+        }
+    }
+
+    private func bob(_ binding: Binding<CGFloat>, delay: Double) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            withAnimation(.easeInOut(duration: 0.35)) { binding.wrappedValue = -8 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay + 0.35) {
+                withAnimation(.easeInOut(duration: 0.35)) { binding.wrappedValue = 0 }
+            }
+        }
+    }
+
+    private func startBobLoop() {
+        bob($leftY,   delay: 0.0)
+        bob($centreY, delay: 0.6)
+        bob($rightY,  delay: 1.2)
+        // Restart loop every 3s
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { startBobLoop() }
+    }
+}
