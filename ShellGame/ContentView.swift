@@ -678,7 +678,6 @@ struct ContentView: View {
             }
             .disabled(!modesUnlocked)
         }
-        .padding(.horizontal, 22)
     }
 
     private func resetProgress() {
@@ -689,12 +688,14 @@ struct ContentView: View {
         ud.removeObject(forKey: "cq_ftue_done")
         ud.removeObject(forKey: "cq_bestSurvival")
         ud.removeObject(forKey: "cq_prestige")
+        ud.removeObject(forKey: "cq_player_name")
         ScoreStore.shared.clear()
         savedHighScore = 0
         savedBestLevel = 1
         savedBestSurvival = 0
         savedPrestige = 0
         modesUnlocked = false
+        playerName = ""
     }
 }
 
