@@ -46,35 +46,26 @@ final class LevelProgressionTests: XCTestCase {
         let state = GameState()
         state.advanceToChoosing()
         state.playerTappedCup(state.correctCupIndex)
-
-        XCTAssertEqual(state.wins,  1, "One win recorded")
-        XCTAssertEqual(state.level, 2, "Level advances to 2 after first win")
+        XCTAssertEqual(state.wins,  1)
+        XCTAssertEqual(state.level, 2)
     }
 
-    func test_secondWin_advancesToLevelThree() {
+    func test_levelProgression_firstFiveWins() {
         let state = GameState()
-        simulateWins(state, count: 2)
-        XCTAssertEqual(state.wins,  2)
-        XCTAssertEqual(state.level, 3)
-    }
-
-    func test_levelProgression_everyWin() {
-        let state = GameState()
-        for expectedLevel in 2...7 {
+        for expectedLevel in 2...6 {
             simulateWin(state)
-            XCTAssertEqual(state.wins,  expectedLevel - 1, "After \(expectedLevel - 1) wins")
-            XCTAssertEqual(state.level, expectedLevel, "Level should be \(expectedLevel)")
+            XCTAssertEqual(state.level, expectedLevel, "Level should be \(expectedLevel) after \(expectedLevel - 1) wins")
         }
     }
 
-    func test_levelCapsAtSeven() {
+    func test_levelCapsAtThirty() {
         let state = GameState()
-        simulateWins(state, count: 30)   // far beyond level 7
-        XCTAssertEqual(state.level, 7, "Level never exceeds 7")
+        simulateWins(state, count: 50)   // far beyond level 30
+        XCTAssertEqual(state.level, 30, "Level never exceeds 30")
     }
 
     func test_gauntletMode_startsAtLevelOne_regardlessOfWins() {
-        UserDefaults.standard.set(6, forKey: "cq_wins")
+        UserDefaults.standard.set(29, forKey: "cq_wins")
         let gauntlet = GameState(mode: .gauntlet)
         XCTAssertEqual(gauntlet.level, 1, "Gauntlet always starts at L1")
         XCTAssertEqual(gauntlet.gauntletLevel, 1)
@@ -82,15 +73,22 @@ final class LevelProgressionTests: XCTestCase {
         XCTAssertFalse(gauntlet.gauntletComplete)
     }
 
+    func test_survivalCountIncrements_atLevelThirty() {
+        let state = GameState()
+        simulateWins(state, count: 29)   // reach L30
+        XCTAssertEqual(state.level, 30)
+        let survivalBefore = state.survivalCount
+        simulateWin(state)               // win at L30 → survival loop
+        XCTAssertEqual(state.survivalCount, survivalBefore + 1, "Survival count increments when winning at L30")
+    }
+
     func test_lossDoesNotResetWins() {
         let state = GameState()
-        simulateWins(state, count: 4)   // 4 wins → level 5
+        simulateWins(state, count: 4)
         let winsBeforeLoss = state.wins
-
         simulateLoss(state)
-
-        XCTAssertEqual(state.wins,  winsBeforeLoss, "Cumulative wins are unaffected by a loss")
-        XCTAssertEqual(state.level, 5, "Level persists after a loss")
+        XCTAssertEqual(state.wins,  winsBeforeLoss)
+        XCTAssertEqual(state.level, 5)
     }
 }
 

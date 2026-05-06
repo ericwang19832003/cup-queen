@@ -92,7 +92,7 @@ final class GameState: ObservableObject {
         prestigeCount = UserDefaults.standard.integer(forKey: PK.prestige)
         dailyStreak   = UserDefaults.standard.integer(forKey: PK.dailyStreak)
         // In non-solo modes, level always starts at 1 regardless of persisted wins
-        level        = mode == .solo ? min(wins + 1, 7) : 1
+        level        = mode == .solo ? min(wins + 1, 30) : 1
         isFTUERound  = !UserDefaults.standard.bool(forKey: PK.ftueDone)
     }
 
@@ -189,7 +189,7 @@ final class GameState: ObservableObject {
             // Level up every win, cap at 7
             let oldLevel = level
             wins += 1
-            level = min(wins + 1, 7)
+            level = min(wins + 1, 30)
 
             // Persist progress
             UserDefaults.standard.set(wins, forKey: PK.wins)
@@ -207,7 +207,7 @@ final class GameState: ObservableObject {
                 hostMessage = HostMessages.levelUp[min(level - 2, HostMessages.levelUp.count - 1)]
             } else {
                 leveledUp = false
-                if level == 7 {
+                if level == 30 {
                     survivalCount += 1
                     if survivalCount > bestSurvival {
                         bestSurvival = survivalCount
