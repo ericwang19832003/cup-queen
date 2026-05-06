@@ -23,6 +23,14 @@ enum GameMode {
     case solo       // normal persistent play
     case gauntlet   // single-life L1→L7 run, no persistence
     case daily      // one fixed-seed round per day
+
+    var submissionKey: String {
+        switch self {
+        case .solo:     return "solo"
+        case .gauntlet: return "gauntlet"
+        case .daily:    return "daily"
+        }
+    }
 }
 
 // MARK: - Persistence Keys
@@ -37,6 +45,7 @@ private enum PK {
     static let prestige      = "cq_prestige"
     static let dailyStreak   = "cq_daily_streak"
     static let dailyLastDate = "cq_daily_last_date"
+    static let playerName    = "cq_player_name"
 }
 
 // MARK: - GameState
@@ -79,6 +88,11 @@ final class GameState: ObservableObject {
     // MARK: Private
     private(set) var wins: Int = 0   // cumulative wins; never resets on loss
     private(set) var mode: GameMode
+
+    /// The player name entered before the session. Read-only from GameState.
+    var playerName: String {
+        UserDefaults.standard.string(forKey: PK.playerName) ?? "Anonymous"
+    }
 
     // MARK: - Init
 

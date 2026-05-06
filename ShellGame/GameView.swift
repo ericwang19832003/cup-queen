@@ -603,18 +603,11 @@ struct GameView: View {
         GameCenterManager.shared.submitHighScore(gameState.highScore)
         GameCenterManager.shared.submitSurvivalCount(gameState.survivalCount)
 
-        let playerName = UserDefaults.standard.string(forKey: "cq_player_name") ?? "Anonymous"
-        let modeString: String = {
-            switch gameState.mode {
-            case .solo:     return "solo"
-            case .gauntlet: return "gauntlet"
-            case .daily:    return "daily"
-            }
-        }()
+        let playerName = gameState.playerName
         ScoreSubmissionService.shared.submit(
             playerName: playerName,
             score: gameState.score,
-            mode: modeString,
+            mode: gameState.mode.submissionKey,
             level: gameState.level
         )
     }
