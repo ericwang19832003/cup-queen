@@ -70,3 +70,49 @@ Activated once a player reaches L7. L7 base config is already at minimum viable 
 
 ### Streak
 Correct picks in a row within the current session. Resets to 0 on any loss. Drives score multiplier (max 4×).
+
+---
+
+## Competition Mode
+
+### Match
+A real-time synchronized duel between two players over Game Center. Distinct from a **Session** — a Match has a defined winner and loser. A Match consists of a series of **Duel Rounds** until one player reaches 3 wins (first-to-3 format). Match results are fully isolated from solo progression (`wins`, `level`, `highScore` are unaffected).
+_Avoid_: Game, battle, race
+
+### Duel Round
+One complete placing → shuffling → choosing cycle played synchronously by both players on the same shuffle sequence (shared seed). The first player to tap the correct cup wins the Duel Round. If the first tapper is wrong, the other player may still win by tapping correctly. A Duel Round ends the moment a correct tap is registered — the round closes for both players simultaneously.
+_Avoid_: Turn, game, stage
+
+### Round Winner
+The player who taps the correct cup first in a Duel Round. Determined by the tapping player's device and broadcast to the opponent via the GKMatch data channel.
+
+### Match Winner
+The first player to win 3 Duel Rounds. The Match ends immediately when this threshold is reached.
+
+### Competition Config
+A fixed `LevelConfig` used for all Duel Rounds regardless of either player's solo `level`. Decouples competition difficulty from solo progression and prevents level-based sandbagging.
+_Avoid_: Duel level, competition level
+
+### Forfeit
+A Match outcome triggered when a player disconnects and fails to reconnect within the 10-second grace period. The disconnected player loses the Match; the opponent is awarded the win.
+
+### Competition Wins
+A persistent, isolated counter of Match wins. Tracked in UserDefaults (`cq_competition_wins`). Never affects solo `wins` or `level`. Submitted to the `cq.leaderboard.duels` Game Center leaderboard.
+_Avoid_: Duel wins, match score
+
+---
+
+## Relationships (Competition)
+
+- A **Match** consists of multiple **Duel Rounds**
+- A **Duel Round** produces exactly one **Round Winner** (or ends via **Forfeit**)
+- A **Match** produces exactly one **Match Winner**
+- A **Match Win** increments **Competition Wins** only — never solo `wins`
+
+## Example dialogue
+
+> **Dev:** "If both players tap wrong, who wins the Duel Round?"
+> **Domain expert:** "Nobody — both tapped wrong cups, so neither gets the Round Winner. Wait, that's not possible: only one cup has the ball, and the round ends on the first *correct* tap. A wrong tap doesn't end the round."
+
+> **Dev:** "Does winning a Match level me up?"
+> **Domain expert:** "No — **Competition Wins** and solo **wins** are completely separate. Matches don't touch your level."

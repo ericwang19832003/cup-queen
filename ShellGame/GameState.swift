@@ -88,6 +88,7 @@ final class GameState: ObservableObject {
     // MARK: Private
     private(set) var wins: Int = 0   // cumulative wins; never resets on loss
     private(set) var mode: GameMode
+    private let winOffset: Int       // persisted wins at session start (non-zero on Fresh Start)
 
     /// The player name entered before the session. Read-only from GameState.
     var playerName: String {
@@ -105,7 +106,9 @@ final class GameState: ObservableObject {
         bestGauntlet = UserDefaults.standard.integer(forKey: PK.bestGauntlet)
         prestigeCount = UserDefaults.standard.integer(forKey: PK.prestige)
         dailyStreak   = UserDefaults.standard.integer(forKey: PK.dailyStreak)
-        // In non-solo modes, level always starts at 1 regardless of persisted wins
+        // winOffset anchors level computation to 0 on Fresh Start without discarding persisted wins
+        winOffset    = (mode == .solo && startFresh) ? wins : 0
+        // In non-solo modes or Fresh Start, level always starts at 1 regardless of persisted wins
         level        = (mode == .solo && !startFresh) ? min(wins + 1, 30) : 1
         isFTUERound  = !UserDefaults.standard.bool(forKey: PK.ftueDone)
     }
@@ -207,10 +210,12 @@ final class GameState: ObservableObject {
             score += delta
             streak += 1
 
-            // Level up every win, cap at 7
+            // Level up every win, cap at 30.
+            // winOffset is non-zero on Fresh Start — ensures level counts from 1
+            // relative to this session's starting point without discarding persisted wins.
             let oldLevel = level
             wins += 1
-            level = min(wins + 1, 30)
+            level = min(wins - winOffset + 1, 30)
 
             // Persist progress
             UserDefaults.standard.set(wins, forKey: PK.wins)
