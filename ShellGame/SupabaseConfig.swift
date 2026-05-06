@@ -13,7 +13,10 @@ enum SupabaseConfig {
     static let anonKey = "YOUR_PROD_ANON_KEY"
 #endif
 
-    static var scoresURL: URL {
-        URL(string: "\(url)/rest/v1/scores")!
-    }
+    static let scoresURL: URL = {
+        guard let url = URL(string: "\(url)/rest/v1/scores") else {
+            fatalError("SupabaseConfig: invalid URL — check your url constant: \(url)")
+        }
+        return url
+    }()
 }
