@@ -534,3 +534,33 @@ final class PlayerNameTests: XCTestCase {
         XCTAssertEqual(capped.count, 20)
     }
 }
+
+// MARK: - StartFreshTests
+
+final class StartFreshTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.set(4, forKey: "cq_wins")
+    }
+
+    override func tearDown() {
+        super.tearDown()
+        UserDefaults.standard.removeObject(forKey: "cq_wins")
+    }
+
+    func test_startFresh_true_startsAtLevel1() {
+        let state = GameState(mode: .solo, startFresh: true)
+        XCTAssertEqual(state.level, 1)
+    }
+
+    func test_startFresh_false_continuesFromSavedLevel() {
+        let state = GameState(mode: .solo, startFresh: false)
+        XCTAssertEqual(state.level, 5) // wins=4 → level=5
+    }
+
+    func test_startFresh_defaultIsFalse() {
+        let state = GameState(mode: .solo)
+        XCTAssertEqual(state.level, 5) // unchanged default behaviour
+    }
+}

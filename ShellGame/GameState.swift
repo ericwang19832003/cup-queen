@@ -96,7 +96,7 @@ final class GameState: ObservableObject {
 
     // MARK: - Init
 
-    init(mode: GameMode = .solo) {
+    init(mode: GameMode = .solo, startFresh: Bool = false) {
         self.mode    = mode
         wins         = UserDefaults.standard.integer(forKey: PK.wins)
         highScore    = UserDefaults.standard.integer(forKey: PK.highScore)
@@ -106,7 +106,7 @@ final class GameState: ObservableObject {
         prestigeCount = UserDefaults.standard.integer(forKey: PK.prestige)
         dailyStreak   = UserDefaults.standard.integer(forKey: PK.dailyStreak)
         // In non-solo modes, level always starts at 1 regardless of persisted wins
-        level        = mode == .solo ? min(wins + 1, 30) : 1
+        level        = (mode == .solo && !startFresh) ? min(wins + 1, 30) : 1
         isFTUERound  = !UserDefaults.standard.bool(forKey: PK.ftueDone)
     }
 
