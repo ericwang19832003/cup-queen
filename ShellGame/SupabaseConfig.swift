@@ -5,13 +5,8 @@
 import Foundation
 
 enum SupabaseConfig {
-#if DEBUG
-    static let url     = "https://YOUR_DEV_PROJECT.supabase.co"
-    static let anonKey = "YOUR_DEV_ANON_KEY"
-#else
-    static let url     = "https://YOUR_PROD_PROJECT.supabase.co"
-    static let anonKey = "YOUR_PROD_ANON_KEY"
-#endif
+    static let url     = "https://nvmphccjysdhacqzbudj.supabase.co"
+    static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52bXBoY2NqeXNkaGFjcXpidWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMzUyNjIsImV4cCI6MjA5MzYxMTI2Mn0.Kc99xFs6tiwcTTnmAfsyxrYS4WSHEOb_yHVfrWKnj_Y"
 
     static let scoresURL: URL = {
         guard let url = URL(string: "\(url)/rest/v1/scores") else {
