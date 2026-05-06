@@ -39,7 +39,7 @@ struct PlayerNameEntryView: View {
                     .background(Color.white.opacity(0.10))
                     .clipShape(Capsule())
                     .overlay(Capsule().strokeBorder(Color.yellow.opacity(0.40), lineWidth: 1))
-                    .onChange(of: name) { newValue in
+                    .onChange(of: name) { _, newValue in
                         if newValue.count > 20 {
                             name = String(newValue.prefix(20))
                         }
