@@ -53,24 +53,55 @@ struct ContentView: View {
                     titleSection
                     Spacer().frame(height: 8)
 
-                    challengeBadge
-                    Spacer().frame(height: 10)
+                    if isReturningPlayer {
+                        // Returning player: progress card, compact cups, teaser, contextual CTA
+                        HomeProgressCard(
+                            level: savedBestLevel,
+                            highScore: savedHighScore,
+                            wins: UserDefaults.standard.integer(forKey: "cq_wins"),
+                            prestigeCount: savedPrestige,
+                            playerName: playerName,
+                            bestSurvival: savedBestSurvival
+                        )
+                        Spacer().frame(height: 12)
 
-                    if savedHighScore > 0 {
-                        bestStatsRow
+                        HostCharacterView(glowPulse: glowPulse)
+                            .frame(height: 72)
+                        Spacer().frame(height: 6)
+
+                        idleCupsSection
+                        Spacer().frame(height: 8)
+
+                        leaderboardTeaser
+                        Spacer().frame(height: 14)
+
+                        continueButton
+                        Spacer().frame(height: 6)
+                        freshStartLink
+                        Spacer().frame(height: 8)
+                    } else {
+                        // New player: challenge badge, large demo, how-to, play now
+                        challengeBadge
+                        Spacer().frame(height: 10)
+
+                        HostCharacterView(glowPulse: glowPulse)
+                            .frame(height: 80)
+                        Spacer().frame(height: 6)
+
+                        demoShuffleSection
+                        Spacer().frame(height: 14)
+
+                        howToPlayRow
+                        Spacer().frame(height: 18)
+
+                        playNowButton
+                        Spacer().frame(height: 8)
                     }
-                    Spacer().frame(height: 14)
 
-                    gamePreviewSection           // ← HERO: host + cups + ball
-                    Spacer().frame(height: 6)
-                    leaderboardTeaser
-                    Spacer().frame(height: 12)
-
-                    howToPlayRow
-                    Spacer().frame(height: 18)
-
-                    playNowButton
-                    Spacer().frame(height: 8)
+                    Divider()
+                        .background(Color.white.opacity(0.15))
+                        .padding(.horizontal, 8)
+                    Spacer().frame(height: 10)
 
                     secondaryButtonRow
                     Spacer().frame(height: 24)
@@ -325,15 +356,6 @@ struct ContentView: View {
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.90))
                     .tracking(7)
-
-                // Personalized welcome greeting with inline prestige crowns
-                let trimmedName = playerName.trimmingCharacters(in: .whitespaces)
-                if !trimmedName.isEmpty {
-                    Text("Welcome back, \(trimmedName)\(savedPrestige > 0 ? " " + String(repeating: "👑", count: min(savedPrestige, 3)) : "")")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.85))
-                        .kerning(1.5)
-                }
             }
             .frame(maxWidth: .infinity)
 
@@ -606,6 +628,95 @@ struct ContentView: View {
                 color: Color(red: 1, green: 0.75, blue: 0.10).opacity(ctaPulse ? 0.80 : 0.38),
                 radius: ctaPulse ? 28 : 14, y: 5
             )
+        }
+    }
+
+    // MARK: - Returning / New Player Computed Properties
+
+    private var isReturningPlayer: Bool { savedHighScore > 0 }
+
+    private var idleCupsSection: some View {
+        IdleCupsView()
+            .frame(height: 130)
+            .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(LinearGradient(
+                        colors: [Color.black.opacity(0.32),
+                                 Color(red: 0.10, green: 0.05, blue: 0.26).opacity(0.55)],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                    .overlay(RoundedRectangle(cornerRadius: 24)
+                        .strokeBorder(LinearGradient(
+                            colors: [Color.yellow.opacity(0.55),
+                                     Color.purple.opacity(0.30),
+                                     Color.yellow.opacity(0.55)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ), lineWidth: 1.5))
+            )
+    }
+
+    private var demoShuffleSection: some View {
+        DemoShuffleView()
+            .frame(height: 170)
+            .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(LinearGradient(
+                        colors: [Color.black.opacity(0.32),
+                                 Color(red: 0.10, green: 0.05, blue: 0.26).opacity(0.55)],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                    .overlay(RoundedRectangle(cornerRadius: 24)
+                        .strokeBorder(LinearGradient(
+                            colors: [Color.yellow.opacity(0.55),
+                                     Color.purple.opacity(0.30),
+                                     Color.yellow.opacity(0.55)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ), lineWidth: 1.5))
+            )
+    }
+
+    private var continueButton: some View {
+        Button {
+            showNameEntry = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 17, weight: .bold))
+                Text("Continue")
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+            }
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 1.00, green: 0.93, blue: 0.28),
+                        Color(red: 1.00, green: 0.68, blue: 0.05),
+                        Color(red: 1.00, green: 0.93, blue: 0.28)
+                    ],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(Capsule())
+            .shadow(
+                color: Color(red: 1, green: 0.75, blue: 0.10).opacity(ctaPulse ? 0.80 : 0.38),
+                radius: ctaPulse ? 28 : 14, y: 5
+            )
+        }
+    }
+
+    private var freshStartLink: some View {
+        Button {
+            startFreshSelected = true
+            showNameEntry = true
+        } label: {
+            Text("Start Fresh")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.40))
+                .underline()
         }
     }
 
