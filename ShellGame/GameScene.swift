@@ -14,6 +14,19 @@
 import SpriteKit
 import UIKit
 
+/// Deterministic LCG random number generator for reproducible shuffles.
+private struct SeededRNG: RandomNumberGenerator {
+    private var state: UInt64
+
+    init(seed: UInt64) { self.state = seed == 0 ? 1 : seed }
+
+    mutating func next() -> UInt64 {
+        // Knuth multiplicative hash
+        state = state &* 6364136223846793005 &+ 1442695040888963407
+        return state
+    }
+}
+
 // MARK: - Delegate
 
 protocol ShellGameSceneDelegate: AnyObject {
@@ -35,26 +48,77 @@ struct LevelConfig {
 
     /// X-positions of the cup slots for this cup count.
     var slotXPositions: [CGFloat] {
-        cupCount == 4 ? [-120, -40, 40, 120] : [-108, 0, 108]
+        switch cupCount {
+        case 5:  return [-110, -55, 0, 55, 110]
+        case 4:  return [-120, -40, 40, 120]
+        default: return [-108, 0, 108]
+        }
     }
     /// Size of each cup sprite for this cup count.
     var cupSize: CGSize {
-        cupCount == 4 ? CGSize(width: 70, height: 86) : CGSize(width: 80, height: 98)
+        switch cupCount {
+        case 5:  return CGSize(width: 60, height: 74)
+        case 4:  return CGSize(width: 70, height: 86)
+        default: return CGSize(width: 80, height: 98)
+        }
     }
     /// Horizontal hit-test radius for this cup count.
-    var hitDX: CGFloat { cupCount == 4 ? 45 : 52 }
+    var hitDX: CGFloat {
+        switch cupCount {
+        case 5:  return 38
+        case 4:  return 45
+        default: return 52
+        }
+    }
 
     static func config(for level: Int) -> LevelConfig {
         switch level {
+        // ── 3-cup tier (L1–3) ──────────────────────────────────────────────
         case 1:  return LevelConfig(cupCount: 3, swapCount: 4,  swapDuration: 0.45, arcHeight: 40, hasMidPause: false, hasGhostEffect: false)
-        case 2:  return LevelConfig(cupCount: 4, swapCount: 7,  swapDuration: 0.38, arcHeight: 44, hasMidPause: false, hasGhostEffect: false)
-        case 3:  return LevelConfig(cupCount: 4, swapCount: 10, swapDuration: 0.30, arcHeight: 52, hasMidPause: true,  hasGhostEffect: false)
-        case 4:  return LevelConfig(cupCount: 4, swapCount: 13, swapDuration: 0.23, arcHeight: 60, hasMidPause: true,  hasGhostEffect: false)
-        case 5:  return LevelConfig(cupCount: 4, swapCount: 16, swapDuration: 0.17, arcHeight: 68, hasMidPause: true,  hasGhostEffect: true)
-        case 6:  return LevelConfig(cupCount: 4, swapCount: 19, swapDuration: 0.13, arcHeight: 76, hasMidPause: true,  hasGhostEffect: true)
-        default: return LevelConfig(cupCount: 4, swapCount: 23, swapDuration: 0.10, arcHeight: 84, hasMidPause: true,  hasGhostEffect: true)
+        case 2:  return LevelConfig(cupCount: 3, swapCount: 6,  swapDuration: 0.38, arcHeight: 44, hasMidPause: false, hasGhostEffect: false)
+        case 3:  return LevelConfig(cupCount: 3, swapCount: 8,  swapDuration: 0.30, arcHeight: 50, hasMidPause: false, hasGhostEffect: false)
+        // ── 4-cup tier (L4–15) ─────────────────────────────────────────────
+        case 4:  return LevelConfig(cupCount: 4, swapCount: 10, swapDuration: 0.26, arcHeight: 54, hasMidPause: false, hasGhostEffect: false)
+        case 5:  return LevelConfig(cupCount: 4, swapCount: 12, swapDuration: 0.23, arcHeight: 58, hasMidPause: false, hasGhostEffect: false)
+        case 6:  return LevelConfig(cupCount: 4, swapCount: 14, swapDuration: 0.20, arcHeight: 62, hasMidPause: true,  hasGhostEffect: false)
+        case 7:  return LevelConfig(cupCount: 4, swapCount: 16, swapDuration: 0.18, arcHeight: 66, hasMidPause: true,  hasGhostEffect: false)
+        case 8:  return LevelConfig(cupCount: 4, swapCount: 18, swapDuration: 0.16, arcHeight: 68, hasMidPause: true,  hasGhostEffect: false)
+        case 9:  return LevelConfig(cupCount: 4, swapCount: 20, swapDuration: 0.15, arcHeight: 70, hasMidPause: true,  hasGhostEffect: false)
+        case 10: return LevelConfig(cupCount: 4, swapCount: 22, swapDuration: 0.14, arcHeight: 72, hasMidPause: true,  hasGhostEffect: false)
+        case 11: return LevelConfig(cupCount: 4, swapCount: 24, swapDuration: 0.13, arcHeight: 74, hasMidPause: true,  hasGhostEffect: true)
+        case 12: return LevelConfig(cupCount: 4, swapCount: 26, swapDuration: 0.12, arcHeight: 76, hasMidPause: true,  hasGhostEffect: true)
+        case 13: return LevelConfig(cupCount: 4, swapCount: 27, swapDuration: 0.11, arcHeight: 78, hasMidPause: true,  hasGhostEffect: true)
+        case 14: return LevelConfig(cupCount: 4, swapCount: 28, swapDuration: 0.11, arcHeight: 80, hasMidPause: true,  hasGhostEffect: true)
+        case 15: return LevelConfig(cupCount: 4, swapCount: 30, swapDuration: 0.10, arcHeight: 82, hasMidPause: true,  hasGhostEffect: true)
+        // ── 5-cup tier (L16–30) ────────────────────────────────────────────
+        case 16: return LevelConfig(cupCount: 5, swapCount: 20, swapDuration: 0.22, arcHeight: 60, hasMidPause: true,  hasGhostEffect: false)
+        case 17: return LevelConfig(cupCount: 5, swapCount: 22, swapDuration: 0.20, arcHeight: 62, hasMidPause: true,  hasGhostEffect: false)
+        case 18: return LevelConfig(cupCount: 5, swapCount: 24, swapDuration: 0.18, arcHeight: 64, hasMidPause: true,  hasGhostEffect: true)
+        case 19: return LevelConfig(cupCount: 5, swapCount: 26, swapDuration: 0.17, arcHeight: 66, hasMidPause: true,  hasGhostEffect: true)
+        case 20: return LevelConfig(cupCount: 5, swapCount: 28, swapDuration: 0.16, arcHeight: 68, hasMidPause: true,  hasGhostEffect: true)
+        case 21: return LevelConfig(cupCount: 5, swapCount: 30, swapDuration: 0.15, arcHeight: 70, hasMidPause: true,  hasGhostEffect: true)
+        case 22: return LevelConfig(cupCount: 5, swapCount: 32, swapDuration: 0.14, arcHeight: 72, hasMidPause: true,  hasGhostEffect: true)
+        case 23: return LevelConfig(cupCount: 5, swapCount: 33, swapDuration: 0.13, arcHeight: 74, hasMidPause: true,  hasGhostEffect: true)
+        case 24: return LevelConfig(cupCount: 5, swapCount: 34, swapDuration: 0.12, arcHeight: 76, hasMidPause: true,  hasGhostEffect: true)
+        case 25: return LevelConfig(cupCount: 5, swapCount: 35, swapDuration: 0.11, arcHeight: 78, hasMidPause: true,  hasGhostEffect: true)
+        case 26: return LevelConfig(cupCount: 5, swapCount: 36, swapDuration: 0.11, arcHeight: 80, hasMidPause: true,  hasGhostEffect: true)
+        case 27: return LevelConfig(cupCount: 5, swapCount: 37, swapDuration: 0.10, arcHeight: 82, hasMidPause: true,  hasGhostEffect: true)
+        case 28: return LevelConfig(cupCount: 5, swapCount: 38, swapDuration: 0.10, arcHeight: 84, hasMidPause: true,  hasGhostEffect: true)
+        case 29: return LevelConfig(cupCount: 5, swapCount: 39, swapDuration: 0.09, arcHeight: 86, hasMidPause: true,  hasGhostEffect: true)
+        case 30: return LevelConfig(cupCount: 5, swapCount: 40, swapDuration: 0.09, arcHeight: 88, hasMidPause: true,  hasGhostEffect: true)
+        default: return LevelConfig(cupCount: 5, swapCount: 40, swapDuration: 0.09, arcHeight: 88, hasMidPause: true,  hasGhostEffect: true)
         }
     }
+
+    /// Fixed config used for all competition Duel Rounds regardless of player solo level.
+    static let competition = LevelConfig(
+        cupCount: 4,
+        swapCount: 12,
+        swapDuration: 0.22,
+        arcHeight: 56,
+        hasMidPause: true,
+        hasGhostEffect: false
+    )
 }
 
 // MARK: - GameScene
@@ -66,6 +130,10 @@ final class GameScene: SKScene {
     var level: Int = 1
     var isFTUERound: Bool = false    // set by GameView before performShuffle
     var survivalBonus: Int = 0       // extra swaps at L7; capped at 12
+    /// When set, shuffle pairs are generated deterministically from this seed.
+    /// Used in competition mode so both devices produce identical shuffles.
+    /// Cleared after each shuffle (GameView sets it before each round).
+    var shuffleSeed: UInt64? = nil
 
     // MARK: Fixed Layout constants (scene coords, anchorPoint = 0.5,0.5)
     private enum Layout {
@@ -113,7 +181,7 @@ final class GameScene: SKScene {
 
     override func didMove(to view: SKView) {
         setupBackground()
-        setupCups(config: LevelConfig.config(for: 1))
+        setupCups(config: LevelConfig.config(for: level))
         setupBall()
     }
 
@@ -432,14 +500,27 @@ final class GameScene: SKScene {
 
         var pairs: [(Int, Int)] = []
         var last: (Int, Int)?
-        for _ in 0..<config.swapCount {
-            var s1: Int, s2: Int
-            repeat {
-                s1 = Int.random(in: 0..<config.cupCount)
-                s2 = Int.random(in: 0..<config.cupCount)
-            } while s1 == s2 || (last?.0 == s2 && last?.1 == s1)
-            pairs.append((s1, s2))
-            last = (s1, s2)
+        if var rng = shuffleSeed.map({ SeededRNG(seed: $0) }) {
+            shuffleSeed = nil   // consume — don't reuse same seed next shuffle
+            for _ in 0..<config.swapCount {
+                var s1: Int, s2: Int
+                repeat {
+                    s1 = Int(rng.next() % UInt64(config.cupCount))
+                    s2 = Int(rng.next() % UInt64(config.cupCount))
+                } while s1 == s2 || (last?.0 == s2 && last?.1 == s1)
+                pairs.append((s1, s2))
+                last = (s1, s2)
+            }
+        } else {
+            for _ in 0..<config.swapCount {
+                var s1: Int, s2: Int
+                repeat {
+                    s1 = Int.random(in: 0..<config.cupCount)
+                    s2 = Int.random(in: 0..<config.cupCount)
+                } while s1 == s2 || (last?.0 == s2 && last?.1 == s1)
+                pairs.append((s1, s2))
+                last = (s1, s2)
+            }
         }
 
         runSwapChain(pairs, index: 0, config: config) {

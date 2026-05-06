@@ -197,67 +197,96 @@ final class LevelConfigTests: XCTestCase {
 
     func test_level1Config() {
         let cfg = LevelConfig.config(for: 1)
-        XCTAssertEqual(cfg.cupCount,      3, "L1 has 3 cups")
-        XCTAssertEqual(cfg.swapCount,     4)
-        XCTAssertEqual(cfg.swapDuration,  0.45, accuracy: 0.001)
+        XCTAssertEqual(cfg.cupCount,     3, "L1 has 3 cups")
+        XCTAssertEqual(cfg.swapCount,    4)
+        XCTAssertEqual(cfg.swapDuration, 0.45, accuracy: 0.001)
         XCTAssertFalse(cfg.hasMidPause)
         XCTAssertFalse(cfg.hasGhostEffect)
     }
 
-    func test_level2HasFourCups() {
-        let cfg = LevelConfig.config(for: 2)
-        XCTAssertEqual(cfg.cupCount, 4, "L2 introduces the 4th cup — clearly harder than L1")
+    func test_level4HasFourCups() {
+        let cfg = LevelConfig.config(for: 4)
+        XCTAssertEqual(cfg.cupCount, 4, "L4 introduces the 4th cup")
         XCTAssertEqual(cfg.slotXPositions.count, 4)
     }
 
-    func test_level3HasMidPause() {
+    func test_level3StillHasThreeCups() {
         let cfg = LevelConfig.config(for: 3)
-        XCTAssertTrue(cfg.hasMidPause, "L3 introduces the fake-out mid-pause")
+        XCTAssertEqual(cfg.cupCount, 3, "L3 is still 3-cup tier")
+    }
+
+    func test_level6HasMidPause() {
+        let cfg = LevelConfig.config(for: 6)
+        XCTAssertTrue(cfg.hasMidPause, "L6 introduces the mid-pause")
         XCTAssertFalse(cfg.hasGhostEffect)
     }
 
-    func test_level5HasGhostEffect() {
-        let cfg = LevelConfig.config(for: 5)
+    func test_level11HasGhostEffect() {
+        let cfg = LevelConfig.config(for: 11)
         XCTAssertTrue(cfg.hasMidPause)
-        XCTAssertTrue(cfg.hasGhostEffect, "L5 introduces the ghost transparency effect")
+        XCTAssertTrue(cfg.hasGhostEffect, "L11 introduces ghost transparency")
     }
 
-    func test_level7Config() {
-        let cfg = LevelConfig.config(for: 7)
-        XCTAssertEqual(cfg.swapCount,    23, "L7 has maximum swap count")
-        XCTAssertEqual(cfg.swapDuration, 0.10, accuracy: 0.001)
+    func test_level16HasFiveCups() {
+        let cfg = LevelConfig.config(for: 16)
+        XCTAssertEqual(cfg.cupCount, 5, "L16 introduces the 5th cup")
+        XCTAssertEqual(cfg.slotXPositions.count, 5)
+    }
+
+    func test_fiveCupLayout() {
+        let cfg = LevelConfig.config(for: 16)
+        XCTAssertEqual(cfg.slotXPositions, [-110, -55, 0, 55, 110])
+        XCTAssertEqual(cfg.cupSize.width,  60, accuracy: 0.1)
+        XCTAssertEqual(cfg.cupSize.height, 74, accuracy: 0.1)
+        XCTAssertEqual(cfg.hitDX,          38, accuracy: 0.1)
+    }
+
+    func test_level30Config() {
+        let cfg = LevelConfig.config(for: 30)
+        XCTAssertEqual(cfg.cupCount,     5)
+        XCTAssertEqual(cfg.swapCount,    40, "L30 has maximum swap count")
+        XCTAssertEqual(cfg.swapDuration, 0.09, accuracy: 0.001)
         XCTAssertTrue(cfg.hasGhostEffect)
     }
 
+    func test_clampsAboveLevel30() {
+        let cfg31 = LevelConfig.config(for: 31)
+        let cfg30 = LevelConfig.config(for: 30)
+        XCTAssertEqual(cfg31.swapCount, cfg30.swapCount, "Above L30 uses L30 params")
+    }
+
     func test_arcHeightIncreasesWithLevel() {
-        let heights = (1...7).map { LevelConfig.config(for: $0).arcHeight }
-        for i in 0..<heights.count - 1 {
-            XCTAssertLessThanOrEqual(heights[i], heights[i + 1],
-                "Arc height must be non-decreasing level \(i+1) → \(i+2)")
+        // Note: resets slightly at L16 (5-cup intro), then climbs again.
+        let tier1 = (1...3).map   { LevelConfig.config(for: $0).arcHeight }
+        let tier2 = (4...15).map  { LevelConfig.config(for: $0).arcHeight }
+        let tier3 = (16...30).map { LevelConfig.config(for: $0).arcHeight }
+        for tier in [tier1, tier2, tier3] {
+            for i in 0..<tier.count - 1 {
+                XCTAssertLessThanOrEqual(tier[i], tier[i + 1])
+            }
         }
     }
 
     func test_swapDurationDecreasesWithLevel() {
-        let durations = (1...7).map { LevelConfig.config(for: $0).swapDuration }
-        for i in 0..<durations.count - 1 {
-            XCTAssertGreaterThanOrEqual(durations[i], durations[i + 1],
-                "Swap duration must decrease or stay equal level \(i+1) → \(i+2)")
+        let tier1 = (1...3).map   { LevelConfig.config(for: $0).swapDuration }
+        let tier2 = (4...15).map  { LevelConfig.config(for: $0).swapDuration }
+        let tier3 = (16...30).map { LevelConfig.config(for: $0).swapDuration }
+        for tier in [tier1, tier2, tier3] {
+            for i in 0..<tier.count - 1 {
+                XCTAssertGreaterThanOrEqual(tier[i], tier[i + 1])
+            }
         }
     }
 
     func test_swapCountIncreasesWithLevel() {
-        let counts = (1...7).map { LevelConfig.config(for: $0).swapCount }
-        for i in 0..<counts.count - 1 {
-            XCTAssertLessThanOrEqual(counts[i], counts[i + 1],
-                "Swap count must increase or stay equal level \(i+1) → \(i+2)")
+        let tier1 = (1...3).map   { LevelConfig.config(for: $0).swapCount }
+        let tier2 = (4...15).map  { LevelConfig.config(for: $0).swapCount }
+        let tier3 = (16...30).map { LevelConfig.config(for: $0).swapCount }
+        for tier in [tier1, tier2, tier3] {
+            for i in 0..<tier.count - 1 {
+                XCTAssertLessThanOrEqual(tier[i], tier[i + 1])
+            }
         }
-    }
-
-    func test_clampsAboveLevel7() {
-        // config(for:) defaults to L7 params for any level above 7
-        let cfg8  = LevelConfig.config(for: 8)
-        let cfg7  = LevelConfig.config(for: 7)
-        XCTAssertEqual(cfg8.swapCount, cfg7.swapCount)
     }
 }
 
