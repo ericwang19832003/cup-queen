@@ -47,6 +47,7 @@
 		AA200000000000000000001A /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000001C /* SupabaseConfig.swift */; };
 		AA200000000000000000001B /* ScoreSubmissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000001D /* ScoreSubmissionService.swift */; };
 		AA200000000000000000001C /* PlayerNameEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000001E /* PlayerNameEntryView.swift */; };
+		AA200000000000000000001D /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000001F /* LeaderboardView.swift */; };
 		AB2000000000000000000001 /* GameStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000001 /* GameStateTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -75,6 +76,7 @@
 		AA100000000000000000001C /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		AA100000000000000000001D /* ScoreSubmissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreSubmissionService.swift; sourceTree = "<group>"; };
 		AA100000000000000000001E /* PlayerNameEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerNameEntryView.swift; sourceTree = "<group>"; };
+		AA100000000000000000001F /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		AB1000000000000000000001 /* GameStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStateTests.swift; sourceTree = "<group>"; };
 		AB1000000000000000000002 /* ShellGameTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShellGameTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -109,6 +111,7 @@
 				AA100000000000000000001C /* SupabaseConfig.swift */,
 				AA100000000000000000001D /* ScoreSubmissionService.swift */,
 				AA100000000000000000001E /* PlayerNameEntryView.swift */,
+				AA100000000000000000001F /* LeaderboardView.swift */,
 				AA1000000000000000000009 /* SoundManager.swift */,
 				AA1000000000000000000010 /* MatchState.swift */,
 				AA1000000000000000000011 /* GameCenterMatchManager.swift */,
@@ -254,6 +257,7 @@
 				AA200000000000000000001A /* SupabaseConfig.swift in Sources */,
 				AA200000000000000000001B /* ScoreSubmissionService.swift in Sources */,
 				AA200000000000000000001C /* PlayerNameEntryView.swift in Sources */,
+				AA200000000000000000001D /* LeaderboardView.swift in Sources */,
 				AA2000000000000000000008 /* SoundManager.swift in Sources */,
 				AA2000000000000000000009 /* MatchState.swift in Sources */,
 				AA2000000000000000000010 /* GameCenterMatchManager.swift in Sources */,
