@@ -139,7 +139,10 @@ struct ContentView: View {
                 checkiCloudConflict()
             }
             .onChange(of: scenePhase) { newPhase in
-                if newPhase == .active { checkiCloudConflict() }
+                if newPhase == .active {
+                    ScoreSubmissionService.shared.drainQueue()
+                    checkiCloudConflict()
+                }
             }
             .sheet(isPresented: $showConflict) {
                 iCloudConflictView(
