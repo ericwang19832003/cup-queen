@@ -287,6 +287,15 @@ struct ContentView: View {
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.90))
                     .tracking(7)
+
+                // Personalized welcome greeting with inline prestige crowns
+                let trimmedName = playerName.trimmingCharacters(in: .whitespaces)
+                if !trimmedName.isEmpty {
+                    Text("Welcome back, \(trimmedName)\(savedPrestige > 0 ? " " + String(repeating: "👑", count: min(savedPrestige, 3)) : "")")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.85))
+                        .kerning(1.5)
+                }
             }
             .frame(maxWidth: .infinity)
 
@@ -301,17 +310,6 @@ struct ContentView: View {
                         .shadow(color: Color.yellow.opacity(0.55), radius: 6)
                 }
                 .offset(x: 4, y: 2)
-            }
-
-            // Personalized welcome greeting with inline prestige crowns
-            let trimmedName = playerName.trimmingCharacters(in: .whitespaces)
-            if !trimmedName.isEmpty {
-                let crowns = savedPrestige > 0 ? " " + String(repeating: "👑", count: min(savedPrestige, 3)) : ""
-                Text("Welcome back, \(trimmedName)\(crowns)")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.85))
-                    .kerning(1.5)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
