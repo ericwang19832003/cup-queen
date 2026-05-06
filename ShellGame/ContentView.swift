@@ -679,12 +679,13 @@ struct ContentView: View {
 
     private var continueButton: some View {
         Button {
+            startFreshSelected = false
             showNameEntry = true
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "arrow.right.circle.fill")
+                Image(systemName: "play.fill")
                     .font(.system(size: 17, weight: .bold))
-                Text("Continue")
+                Text("Continue — Level \(savedBestLevel)")
                     .font(.system(size: 20, weight: .heavy, design: .rounded))
             }
             .foregroundColor(.black)
@@ -713,7 +714,7 @@ struct ContentView: View {
             startFreshSelected = true
             showNameEntry = true
         } label: {
-            Text("Start Fresh")
+            Text("Fresh Start")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundColor(.white.opacity(0.40))
                 .underline()
