@@ -171,6 +171,12 @@ final class MatchState: ObservableObject {
         phase = .countdown
     }
 
+    /// Transitions to .roundActive so DuelGameView mounts without incrementing currentRound.
+    /// Called when the countdown finishes; the actual round number is assigned in startRound().
+    func prepareRound() {
+        phase = .roundActive
+    }
+
     /// Advances to the next round.
     func startRound() {
         currentRound += 1

@@ -49,9 +49,10 @@ struct CompetitionView: View {
 
                 case .countdown:
                     CountdownView {
-                        // Countdown finished — signal ready for round 1
-                        let nextRound = matchState.currentRound + 1
-                        GameCenterMatchManager.shared.sendMessage(.readyForRound(nextRound))
+                        // Countdown finished — transition directly to roundActive so
+                        // DuelGameView mounts and runs its own ready handshake for round 1.
+                        // The synchronized countdown replaces a network ready exchange here.
+                        matchState.prepareRound()
                     }
 
                 case .roundActive, .roundResult:
@@ -85,8 +86,9 @@ struct CompetitionView: View {
             GameCenterMatchManager.shared.startMatchmaking()
             SoundManager.shared.startCompetitionAmbient()   // Feature 3
         }
-        // Background → forfeit
+        // Background → forfeit (only during active play; result/idle screens are safe to background)
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            guard matchState.phase.isActiveRound else { return }
             GameCenterMatchManager.shared.sendMessage(.forfeit)
             GameCenterMatchManager.shared.disconnect()
         }
@@ -374,10 +376,13 @@ private struct DuelGameView: View {
             remoteReady = true
             checkBothReady()
         }
-        // Non-host seed notification
+        // Non-host seed notification — also derives correctCupIndex and places the ball
         .onReceive(NotificationCenter.default.publisher(for: .duelShuffleSeedReceived)) { notif in
             guard let seed = notif.userInfo?["seed"] as? UInt64 else { return }
             scene?.shuffleSeed = seed
+            guard !GameCenterMatchManager.shared.isHost else { return }
+            correctCupIndex = Int(seed % 4)
+            scene?.placeBall(atCupIndex: correctCupIndex)
         }
     }
 
@@ -457,7 +462,7 @@ private struct DuelGameView: View {
 
     private func setupScene() {
         let s = GameScene(size: CGSize(width: 390, height: 310))
-        s.level = 1   // visual level; actual config injected via LevelConfig.competition
+        s.level = 4   // level 4 → 4-cup layout, matching competition mode (0..<4 correctCupIndex)
         let coord = DuelCoordinator(
             scene: s,
             onShuffleFinished: { isInteractive = true },
@@ -493,19 +498,20 @@ private struct DuelGameView: View {
     private func beginRound() {
         isInteractive = false
         showRoundResult = false
-
-        // Host generates and broadcasts the seed; non-host receives via notification
-        if GameCenterMatchManager.shared.isHost {
-            let seed = UInt64.random(in: 1...UInt64.max)
-            scene?.shuffleSeed = seed
-            GameCenterMatchManager.shared.sendMessage(.shuffleSeed(seed))
-        }
-        // (Non-host seed set via .onReceive above)
-
-        correctCupIndex = Int.random(in: 0..<4)   // 4 cups in competition mode
         matchState.startRound()
         scene?.resetForNewRound()
-        scene?.placeBall(atCupIndex: correctCupIndex)
+
+        if GameCenterMatchManager.shared.isHost {
+            // Host picks a random seed, derives the correct cup from it, broadcasts both.
+            // Non-host receives the seed via notification and derives the same cup index.
+            let seed = UInt64.random(in: 1...UInt64.max)
+            correctCupIndex = Int(seed % 4)
+            scene?.shuffleSeed = seed
+            GameCenterMatchManager.shared.sendMessage(.shuffleSeed(seed))
+            scene?.placeBall(atCupIndex: correctCupIndex)
+        }
+        // Non-host: placeBall is called from the .duelShuffleSeedReceived handler below,
+        // ensuring both devices place the ball under the same cup before shuffling.
     }
 
     private func handleCupRevealed(_ tappedIndex: Int) {

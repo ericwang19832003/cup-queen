@@ -157,6 +157,8 @@ private extension GameCenterMatchManager {
 
         case .roundWon:
             // Sender won — from the receiver's perspective, the remote player won.
+            // Guard on .roundActive to prevent simultaneous-tap double-awarding.
+            guard case .roundActive = state.phase else { return }
             state.recordRoundWin(for: .remote)
 
         case .readyForRound(let round):
