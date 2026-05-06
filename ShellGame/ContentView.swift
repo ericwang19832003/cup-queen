@@ -1020,7 +1020,7 @@ private struct HomeProgressCard: View {
                                         startPoint: .leading, endPoint: .trailing
                                     )
                                 )
-                                .frame(width: geo.size.width * min(progressFraction, 1.0), height: 6)
+                                .frame(width: geo.size.width * max(0, min(progressFraction, 1.0)), height: 6)
                         }
                     }
                     .frame(height: 6)
