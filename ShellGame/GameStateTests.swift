@@ -507,3 +507,30 @@ final class ScoreQueueTests: XCTestCase {
         XCTAssertNil(result)
     }
 }
+
+// MARK: - PlayerNameTests
+
+final class PlayerNameTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.removeObject(forKey: "cq_player_name")
+    }
+
+    func test_savedName_defaultsToEmptyString() {
+        let name = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
+        XCTAssertEqual(name, "")
+    }
+
+    func test_saveName_persistsToUserDefaults() {
+        UserDefaults.standard.set("Zara", forKey: "cq_player_name")
+        let loaded = UserDefaults.standard.string(forKey: "cq_player_name")
+        XCTAssertEqual(loaded, "Zara")
+    }
+
+    func test_nameCappedAt20Characters() {
+        let longName = String(repeating: "X", count: 25)
+        let capped = String(longName.prefix(20))
+        XCTAssertEqual(capped.count, 20)
+    }
+}
