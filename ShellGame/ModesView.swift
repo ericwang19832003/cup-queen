@@ -50,7 +50,7 @@ struct ModesView: View {
         prestigeCount  = UserDefaults.standard.integer(forKey: "cq_prestige")
         dailyStreak    = UserDefaults.standard.integer(forKey: "cq_daily_streak")
         dailyAttempted = GameState().isDailyAttempted
-        currentLevel   = min(UserDefaults.standard.integer(forKey: "cq_wins") + 1, 7)
+        currentLevel   = min(UserDefaults.standard.integer(forKey: "cq_wins") + 1, 30)
     }
 
     // MARK: - Background
@@ -112,14 +112,14 @@ struct ModesView: View {
 
     // MARK: - Prestige Card
     private var prestigeCard: some View {
-        let canPrestige = currentLevel == 7
+        let canPrestige = currentLevel >= 30
         return modeCard(
             icon: "crown.fill",
             iconColor: Color(red: 1, green: 0.80, blue: 0.22),
             title: "Prestige",
             subtitle: canPrestige
                 ? "Reset to L1. Keep your records. Earn a crown."
-                : "Reach Level 7 to prestige.",
+                : "Reach Level 30 to prestige.",
             stat: prestigeCount > 0 ? "👑 × \(prestigeCount)" : "Not yet prestiged",
             ctaLabel: canPrestige ? "Prestige Now" : "Not Available",
             ctaAction: canPrestige ? { showPrestigeAlert = true } : nil,
