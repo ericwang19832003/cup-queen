@@ -95,13 +95,7 @@ struct ContentView: View {
                     playNowButton
                     Spacer().frame(height: 8)
 
-                    leaderboardButton
-                    Spacer().frame(height: 10)
-
-                    duelButton
-                    Spacer().frame(height: 8)
-
-                    modesButton
+                    secondaryButtonRow
                     Spacer().frame(height: 6)
 
                     footerText
@@ -571,101 +565,79 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Leaderboard Button
+    // MARK: - Secondary Button Row
 
-    private var leaderboardButton: some View {
-        Button {
-            showLeaderboard = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "trophy.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                Text("Leaderboard")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+    private var secondaryButtonRow: some View {
+        HStack(spacing: 10) {
+            // Leaderboard
+            Button { showLeaderboard = true } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Leaderboard")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(Color(red: 0.30, green: 0.75, blue: 1.00))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.white.opacity(0.06))
+                        .overlay(RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(Color(red: 0.30, green: 0.75, blue: 1.00).opacity(0.40), lineWidth: 1.5))
+                )
             }
-            .foregroundColor(Color(red: 0.30, green: 0.75, blue: 1.00))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(
-                Capsule()
-                    .fill(Color.white.opacity(0.06))
-                    .overlay(
-                        Capsule().strokeBorder(
-                            Color(red: 0.30, green: 0.75, blue: 1.00).opacity(0.40),
-                            lineWidth: 1.5
-                        )
-                    )
-            )
+
+            // Duel
+            Button {
+                if !GameCenterManager.shared.isAuthenticated { GameCenterManager.shared.authenticate() }
+                showDuelLobby = true
+            } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: "swords")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Duel")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(Color(red: 1, green: 0.88, blue: 0.30))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color.white.opacity(0.07))
+                        .overlay(RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(Color.yellow.opacity(0.45), lineWidth: 1.5))
+                )
+            }
+
+            // Modes
+            Button { if modesUnlocked { showModes = true } } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: modesUnlocked ? "star.circle.fill" : "lock.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Modes")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(modesUnlocked
+                    ? Color(red: 0.78, green: 0.58, blue: 1.00)
+                    : .white.opacity(0.28))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(modesUnlocked ? Color(red: 0.35, green: 0.10, blue: 0.60).opacity(0.22) : Color.white.opacity(0.05))
+                        .overlay(RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(
+                                modesUnlocked ? Color(red: 0.65, green: 0.40, blue: 1.00).opacity(0.45) : Color.white.opacity(0.10),
+                                lineWidth: 1.2))
+                )
+            }
+            .disabled(!modesUnlocked)
         }
-    }
-
-    // MARK: - Duel Button
-
-    private var duelButton: some View {
-        Button {
-            // Trigger auth if needed, then always open the lobby.
-            // CompetitionView handles the unauthenticated case gracefully.
-            if !GameCenterManager.shared.isAuthenticated {
-                GameCenterManager.shared.authenticate()
-            }
-            showDuelLobby = true
-        } label: {
-            HStack(spacing: 9) {
-                Image(systemName: "swords")   // SF Symbol — avoids emoji font issues
-                    .font(.system(size: 15, weight: .semibold))
-                Text("Duel")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-            }
-            .foregroundColor(Color(red: 1, green: 0.88, blue: 0.30))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                Capsule()
-                    .fill(Color.white.opacity(0.07))
-                    .overlay(
-                        Capsule().strokeBorder(
-                            LinearGradient(
-                                colors: [Color.yellow.opacity(0.55), Color.orange.opacity(0.35)],
-                                startPoint: .leading, endPoint: .trailing
-                            ),
-                            lineWidth: 1.5
-                        )
-                    )
-            )
-        }
+        .padding(.horizontal, 22)
     }
 
     // MARK: - Footer
-
-    private var modesButton: some View {
-        Button {
-            if modesUnlocked { showModes = true }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: modesUnlocked ? "star.circle.fill" : "lock.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                Text(modesUnlocked ? "✦ Modes" : "🔒 Unlock at Level 7")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-            }
-            .foregroundColor(modesUnlocked
-                ? Color(red: 0.78, green: 0.58, blue: 1.00)
-                : .white.opacity(0.28))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 13)
-            .background(
-                Capsule()
-                    .fill(modesUnlocked
-                          ? Color(red: 0.35, green: 0.10, blue: 0.60).opacity(0.22)
-                          : Color.white.opacity(0.05))
-                    .overlay(Capsule().strokeBorder(
-                        modesUnlocked
-                            ? Color(red: 0.65, green: 0.40, blue: 1.00).opacity(0.45)
-                            : Color.white.opacity(0.10),
-                        lineWidth: 1.2))
-            )
-        }
-        .disabled(!modesUnlocked)
-    }
 
     private var footerText: some View {
         Text("Magic Show Arcade")
