@@ -122,7 +122,7 @@ struct iCloudConflictView: View {
         let prest   = snapshot["cq_prestige"]      as? Int ?? 0
         let streak  = snapshot["cq_daily_streak"]  as? Int ?? 0
         return [
-            DisplayRow(label: "Level",         value: "Level \(min(wins + 1, 7))"),
+            DisplayRow(label: "Level",         value: "Level \(min(wins + 1, 30))"),
             DisplayRow(label: "High Score",    value: "\(high) pts"),
             DisplayRow(label: "Best Survival", value: surv  > 0 ? "×\(surv)"       : "—"),
             DisplayRow(label: "Best Gauntlet", value: gaunt > 0 ? "\(gaunt) pts"   : "—"),
