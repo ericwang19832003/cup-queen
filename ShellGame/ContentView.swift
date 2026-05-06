@@ -51,6 +51,7 @@ struct ContentView: View {
     @State private var showConflict  = false
     @State private var showNameEntry  = false
     @State private var navigateToGame = false
+    @State private var showLeaderboard = false
     @State private var localSnap: [String: Any]  = [:]
     @State private var remoteSnap: [String: Any] = [:]
 
@@ -89,6 +90,9 @@ struct ContentView: View {
                     Spacer().frame(height: 18)
 
                     playNowButton
+                    Spacer().frame(height: 8)
+
+                    leaderboardButton
                     Spacer().frame(height: 10)
 
                     duelButton
@@ -120,6 +124,9 @@ struct ContentView: View {
             }
             .fullScreenCover(isPresented: $showModes) {
                 ModesView()
+            }
+            .fullScreenCover(isPresented: $showLeaderboard) {
+                LeaderboardView()
             }
             .onAppear {
                 startAnimations()
@@ -544,6 +551,34 @@ struct ContentView: View {
             .shadow(
                 color: Color(red: 1, green: 0.75, blue: 0.10).opacity(ctaPulse ? 0.80 : 0.38),
                 radius: ctaPulse ? 28 : 14, y: 5
+            )
+        }
+    }
+
+    // MARK: - Leaderboard Button
+
+    private var leaderboardButton: some View {
+        Button {
+            showLeaderboard = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Leaderboard")
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(Color(red: 0.30, green: 0.75, blue: 1.00))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.06))
+                    .overlay(
+                        Capsule().strokeBorder(
+                            Color(red: 0.30, green: 0.75, blue: 1.00).opacity(0.40),
+                            lineWidth: 1.5
+                        )
+                    )
             )
         }
     }
