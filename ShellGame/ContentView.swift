@@ -9,38 +9,12 @@
 
 import SwiftUI
 
-// MARK: - Pre-computed star data (deterministic; avoids per-render random)
-
-private func makeStars() -> [StarData] {
-    var out: [StarData] = []
-    for i in 0..<28 {
-        let x: CGFloat       = CGFloat(i) * 14.2 + 8
-        let y: CGFloat       = CGFloat((i * 41 + 17) % 860)
-        let size: CGFloat    = CGFloat(1 + (i % 4))
-        let opacity: Double  = 0.25 + Double(i % 6) * 0.09
-        let duration: Double = 1.4  + Double(i % 7) * 0.18
-        let delay: Double    = Double(i % 9) * 0.22
-        out.append(StarData(id: i, x: x, y: y, size: size,
-                            opacity: opacity, duration: duration, delay: delay))
-    }
-    return out
-}
-
-private let backgroundStars: [StarData] = makeStars()
-
-private struct StarData: Identifiable {
-    let id: Int
-    let x, y, size: CGFloat
-    let opacity, duration, delay: Double
-}
-
 // MARK: - ContentView
 
 struct ContentView: View {
 
     @Environment(\.scenePhase) private var scenePhase
 
-    @State private var animateStars    = false
     @State private var glowPulse      = false
     @State private var ctaPulse       = false
     @State private var ballGlow       = false
@@ -214,7 +188,6 @@ struct ContentView: View {
     }
 
     private func startAnimations() {
-        animateStars = true
         withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { glowPulse = true }
         withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) { ctaPulse  = true }
         withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { ballGlow  = true }
@@ -286,19 +259,25 @@ struct ContentView: View {
     }
 
     private var starField: some View {
-        GeometryReader { geo in
-            ForEach(backgroundStars) { star in
-                Circle()
-                    .fill(Color.yellow.opacity(star.opacity))
-                    .frame(width: star.size, height: star.size)
-                    .position(x: star.x, y: star.y * (geo.size.height / 860))
-                    .scaleEffect(animateStars ? 1.5 : 0.7)
-                    .animation(
-                        .easeInOut(duration: star.duration)
-                            .repeatForever(autoreverses: true)
-                            .delay(star.delay),
-                        value: animateStars
-                    )
+        TimelineView(.animation) { timeline in
+            Canvas { ctx, size in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                for i in 0..<28 {
+                    let x: CGFloat       = CGFloat(i) * 14.2 + 8
+                    let rawY: CGFloat    = CGFloat((i * 41 + 17) % 860)
+                    let y                = rawY * (size.height / 860)
+                    let baseOpacity: Double = 0.25 + Double(i % 6) * 0.09
+                    let duration: Double = 1.4  + Double(i % 7) * 0.18
+                    let delay: Double    = Double(i % 9) * 0.22
+                    let phase            = (t - delay).truncatingRemainder(dividingBy: duration * 2) / (duration * 2)
+                    let pulse            = 0.5 - 0.5 * cos(phase * 2 * .pi)
+                    let opacity          = baseOpacity * (0.46 + 0.54 * pulse)
+                    let radius: CGFloat  = CGFloat(1 + (i % 4)) * (0.7 + 0.8 * pulse)
+                    let rect = CGRect(x: x - radius, y: y - radius,
+                                      width: radius * 2, height: radius * 2)
+                    ctx.fill(Path(ellipseIn: rect),
+                             with: .color(.yellow.opacity(opacity)))
+                }
             }
         }
         .ignoresSafeArea()
