@@ -44,6 +44,7 @@
 		AA2000000000000000000017 /* DailyChallengeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000018 /* DailyChallengeView.swift */; };
 		AA2000000000000000000018 /* iCloudSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000019 /* iCloudSyncManager.swift */; };
 		AA2000000000000000000019 /* iCloudConflictView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000001A /* iCloudConflictView.swift */; };
+		AA200000000000000000001A /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000001C /* SupabaseConfig.swift */; };
 		AB2000000000000000000001 /* GameStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000001 /* GameStateTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -69,6 +70,7 @@
 		AA1000000000000000000019 /* iCloudSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iCloudSyncManager.swift; sourceTree = "<group>"; };
 		AA100000000000000000001A /* iCloudConflictView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iCloudConflictView.swift; sourceTree = "<group>"; };
 		AA100000000000000000001B /* ShellGame.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShellGame.entitlements; sourceTree = "<group>"; };
+		AA100000000000000000001C /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		AB1000000000000000000001 /* GameStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameStateTests.swift; sourceTree = "<group>"; };
 		AB1000000000000000000002 /* ShellGameTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShellGameTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -100,6 +102,7 @@
 				AA1000000000000000000003 /* GameView.swift */,
 				AA1000000000000000000004 /* GameScene.swift */,
 				AA1000000000000000000005 /* GameState.swift */,
+				AA100000000000000000001C /* SupabaseConfig.swift */,
 				AA1000000000000000000009 /* SoundManager.swift */,
 				AA1000000000000000000010 /* MatchState.swift */,
 				AA1000000000000000000011 /* GameCenterMatchManager.swift */,
@@ -242,6 +245,7 @@
 				AA2000000000000000000003 /* GameView.swift in Sources */,
 				AA2000000000000000000004 /* GameScene.swift in Sources */,
 				AA2000000000000000000005 /* GameState.swift in Sources */,
+				AA200000000000000000001A /* SupabaseConfig.swift in Sources */,
 				AA2000000000000000000008 /* SoundManager.swift in Sources */,
 				AA2000000000000000000009 /* MatchState.swift in Sources */,
 				AA2000000000000000000010 /* GameCenterMatchManager.swift in Sources */,
