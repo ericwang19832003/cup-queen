@@ -118,6 +118,7 @@ struct ContentView: View {
                     navigateToGame = true
                     playWasTapped = false
                 }
+                startFreshSelected = false
             }) {
                 PlayerNameEntryView { startFresh in
                     startFreshSelected = startFresh

@@ -12,10 +12,7 @@ struct PlayerNameEntryView: View {
     @State private var name: String = ""
     @State private var startFresh: Bool = false
 
-    private var savedLevel: Int {
-        let wins = UserDefaults.standard.integer(forKey: "cq_wins")
-        return min(wins + 1, 30)
-    }
+    @State private var savedLevel: Int = 1
 
     private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
 
@@ -91,6 +88,8 @@ struct PlayerNameEntryView: View {
         }
         .onAppear {
             name = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
+            let wins = UserDefaults.standard.integer(forKey: "cq_wins")
+            savedLevel = min(wins + 1, 30)
         }
         .presentationDetents([.height(360)])
         .presentationDragIndicator(.visible)
