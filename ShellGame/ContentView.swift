@@ -793,114 +793,76 @@ private struct SettingsSheet: View {
     }
 }
 
-// MARK: - Host Character (SwiftUI-drawn, App Store safe)
+// MARK: - Host Character (magic emblem)
 
-/// Stylised Las Vegas female magician — upper body only.
-/// Top hat, elegant dress, one arm raised pointing toward the cups.
 private struct HostCharacterView: View {
     let glowPulse: Bool
 
     var body: some View {
         ZStack {
-            // Soft purple aura
+            // Outer glow ring
             Circle()
-                .fill(Color(red: 0.45, green: 0.02, blue: 0.65).opacity(glowPulse ? 0.28 : 0.15))
-                .frame(width: 130, height: 130)
-                .blur(radius: 22)
-
-            // ── Dress / shoulders ──
-            Capsule()
-                .fill(LinearGradient(
-                    colors: [Color(red: 0.64, green: 0.04, blue: 0.70), Color(red: 0.30, green: 0.02, blue: 0.48)],
-                    startPoint: .top, endPoint: .bottom
-                ))
-                .frame(width: 58, height: 44)
-                .offset(y: 30)
-
-            // Gold neckline trim
-            Rectangle()
-                .fill(Color(red: 1, green: 0.80, blue: 0.22))
-                .frame(width: 58, height: 2.5)
-                .offset(y: 9)
-
-            // Neck
-            Capsule()
-                .fill(Color(red: 0.90, green: 0.76, blue: 0.62))
-                .frame(width: 9, height: 12)
-                .offset(y: 2)
-
-            // Head
-            Circle()
-                .fill(Color(red: 0.90, green: 0.76, blue: 0.62))
-                .frame(width: 28, height: 28)
-                .offset(y: -14)
-
-            // Hair (dark, swept back)
-            Ellipse()
-                .fill(Color(red: 0.18, green: 0.08, blue: 0.06))
-                .frame(width: 34, height: 26)
-                .offset(y: -16)
-
-            // Hair highlight
-            Capsule()
-                .fill(Color(red: 0.42, green: 0.20, blue: 0.14).opacity(0.55))
-                .frame(width: 5, height: 20)
-                .offset(x: -9, y: -15)
-
-            // Top hat brim
-            Capsule()
-                .fill(Color(red: 0.07, green: 0.03, blue: 0.18))
-                .frame(width: 42, height: 5)
-                .overlay(
-                    Capsule().strokeBorder(Color(red: 1, green: 0.80, blue: 0.22).opacity(0.60), lineWidth: 1)
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color(red: 0.55, green: 0.02, blue: 0.75).opacity(glowPulse ? 0.45 : 0.22),
+                            Color.clear
+                        ],
+                        center: .center, startRadius: 20, endRadius: 70
+                    )
                 )
-                .offset(y: -31)
+                .frame(width: 140, height: 140)
 
-            // Top hat body
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Color(red: 0.07, green: 0.03, blue: 0.18))
-                .frame(width: 26, height: 20)
-                .offset(y: -44)
+            // Inner ring
+            Circle()
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 1, green: 0.85, blue: 0.22).opacity(0.85),
+                            Color(red: 0.75, green: 0.25, blue: 1.00).opacity(0.60),
+                            Color(red: 1, green: 0.85, blue: 0.22).opacity(0.85)
+                        ],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
+                .frame(width: 82, height: 82)
 
-            // Gold hat band
-            Rectangle()
-                .fill(Color(red: 1, green: 0.80, blue: 0.22))
-                .frame(width: 26, height: 3)
-                .offset(y: -33)
+            // Top hat emoji
+            Text("🎩")
+                .font(.system(size: 42))
+                .offset(y: -2)
+                .shadow(color: Color(red: 1, green: 0.80, blue: 0.10).opacity(0.70), radius: 12)
 
-            // ── Right arm — raised, pointing down toward cups ──
-            Capsule()
-                .fill(LinearGradient(
-                    colors: [Color(red: 0.64, green: 0.04, blue: 0.70), Color(red: 0.40, green: 0.02, blue: 0.50)],
-                    startPoint: .top, endPoint: .bottom
-                ))
-                .frame(width: 8, height: 38)
-                .rotationEffect(.degrees(40))
-                .offset(x: 34, y: 18)
+            // Sparkle — top
+            Image(systemName: "sparkle")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(Color(red: 1, green: 0.85, blue: 0.22).opacity(glowPulse ? 0.90 : 0.45))
+                .offset(x: 0, y: -52)
 
-            // Wand shaft
-            Rectangle()
-                .fill(Color(red: 0.14, green: 0.07, blue: 0.06))
-                .frame(width: 3, height: 22)
-                .rotationEffect(.degrees(40))
-                .offset(x: 49, y: 30)
+            // Sparkle — left
+            Image(systemName: "sparkle")
+                .font(.system(size: 7, weight: .bold))
+                .foregroundColor(Color(red: 1, green: 0.85, blue: 0.22).opacity(glowPulse ? 0.80 : 0.38))
+                .offset(x: -46, y: -8)
 
-            // Wand star tip
-            Image(systemName: "star.fill")
-                .font(.system(size: 11))
-                .foregroundColor(.yellow)
-                .shadow(color: .yellow, radius: 5)
-                .offset(x: 57, y: 42)
+            // Sparkle — right
+            Image(systemName: "sparkle")
+                .font(.system(size: 7, weight: .bold))
+                .foregroundColor(Color(red: 1, green: 0.85, blue: 0.22).opacity(glowPulse ? 0.80 : 0.38))
+                .offset(x: 46, y: -8)
 
-            // ── Left arm — relaxed at side ──
-            Capsule()
-                .fill(LinearGradient(
-                    colors: [Color(red: 0.64, green: 0.04, blue: 0.70), Color(red: 0.40, green: 0.02, blue: 0.50)],
-                    startPoint: .top, endPoint: .bottom
-                ))
-                .frame(width: 8, height: 28)
-                .rotationEffect(.degrees(-14))
-                .offset(x: -33, y: 20)
+            // Sparkle — bottom-left
+            Image(systemName: "sparkle")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundColor(Color(red: 0.78, green: 0.50, blue: 1.00).opacity(glowPulse ? 0.70 : 0.30))
+                .offset(x: -28, y: 36)
+
+            // Sparkle — bottom-right
+            Image(systemName: "sparkle")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundColor(Color(red: 0.78, green: 0.50, blue: 1.00).opacity(glowPulse ? 0.70 : 0.30))
+                .offset(x: 28, y: 36)
         }
         .compositingGroup()
     }
