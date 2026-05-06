@@ -57,6 +57,7 @@ struct ContentView: View {
     @State private var localSnap: [String: Any]  = [:]
     @State private var remoteSnap: [String: Any] = [:]
     @State private var playerName: String = ""
+    @State private var topScore: (name: String, score: Int)? = nil
 
     // Persisted best stats — read fresh each time view appears
     @State private var savedHighScore: Int = 0
@@ -87,7 +88,9 @@ struct ContentView: View {
                     Spacer().frame(height: 14)
 
                     gamePreviewSection           // ← HERO: host + cups + ball
-                    Spacer().frame(height: 18)
+                    Spacer().frame(height: 6)
+                    leaderboardTeaser
+                    Spacer().frame(height: 12)
 
                     howToPlayRow
                     Spacer().frame(height: 18)
@@ -146,6 +149,7 @@ struct ContentView: View {
             }
             .onAppear {
                 startAnimations()
+                fetchTopScore()
                 savedHighScore    = UserDefaults.standard.integer(forKey: "cq_highScore")
                 savedBestLevel    = max(1, UserDefaults.standard.integer(forKey: "cq_bestLevel"))
                 savedBestSurvival = UserDefaults.standard.integer(forKey: "cq_bestSurvival")
@@ -159,6 +163,7 @@ struct ContentView: View {
                 if newPhase == .active {
                     ScoreSubmissionService.shared.drainQueue()
                     checkiCloudConflict()
+                    fetchTopScore()
                 }
             }
             .sheet(isPresented: $showConflict) {
@@ -213,6 +218,57 @@ struct ContentView: View {
         withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) { glowPulse = true }
         withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) { ctaPulse  = true }
         withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { ballGlow  = true }
+    }
+
+    private func fetchTopScore() {
+        guard var components = URLComponents(string: "\(SupabaseConfig.url)/rest/v1/scores") else { return }
+        components.queryItems = [
+            URLQueryItem(name: "select", value: "player_name,score"),
+            URLQueryItem(name: "order",  value: "score.desc"),
+            URLQueryItem(name: "limit",  value: "1")
+        ]
+        guard let url = components.url else { return }
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
+        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            guard let data,
+                  let entries = try? JSONDecoder().decode([TopEntry].self, from: data),
+                  let top = entries.first else { return }
+            DispatchQueue.main.async { self.topScore = (name: top.playerName, score: top.score) }
+        }.resume()
+    }
+
+    private var leaderboardTeaser: some View {
+        Group {
+            if let top = topScore {
+                HStack(spacing: 6) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                    Text("Top score:")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundColor(.white.opacity(0.45))
+                    Text(top.name)
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+                    Text("·")
+                        .foregroundColor(.white.opacity(0.30))
+                    Text("\(top.score) pts")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule()
+                        .fill(Color(red: 1, green: 0.75, blue: 0.10).opacity(0.09))
+                        .overlay(Capsule().strokeBorder(
+                            Color(red: 1, green: 0.80, blue: 0.22).opacity(0.28), lineWidth: 1))
+                )
+            }
+        }
     }
 
     // MARK: - Background
@@ -660,6 +716,17 @@ struct ContentView: View {
         savedBestSurvival = 0
         savedPrestige = 0
         modesUnlocked = false
+    }
+}
+
+// MARK: - Top Leaderboard Entry
+
+private struct TopEntry: Decodable {
+    let playerName: String
+    let score: Int
+    enum CodingKeys: String, CodingKey {
+        case playerName = "player_name"
+        case score
     }
 }
 
