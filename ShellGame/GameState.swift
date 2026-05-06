@@ -78,7 +78,7 @@ final class GameState: ObservableObject {
 
     // MARK: Private
     private(set) var wins: Int = 0   // cumulative wins; never resets on loss
-    private let mode: GameMode
+    private(set) var mode: GameMode
 
     // MARK: - Init
 
