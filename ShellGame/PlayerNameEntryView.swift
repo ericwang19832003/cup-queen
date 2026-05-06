@@ -9,7 +9,8 @@ struct PlayerNameEntryView: View {
     let onPlay: () -> Void
 
     @State private var name: String = ""
-    @Environment(\.dismiss) private var dismiss
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
 
     var body: some View {
         ZStack {
@@ -39,7 +40,7 @@ struct PlayerNameEntryView: View {
                     .background(Color.white.opacity(0.10))
                     .clipShape(Capsule())
                     .overlay(Capsule().strokeBorder(Color.yellow.opacity(0.40), lineWidth: 1))
-                    .onChange(of: name) { _, newValue in
+                    .onChange(of: name) { newValue in
                         if newValue.count > 20 {
                             name = String(newValue.prefix(20))
                         }
@@ -47,8 +48,7 @@ struct PlayerNameEntryView: View {
                     .padding(.horizontal, 32)
 
                 Button {
-                    let trimmed = name.trimmingCharacters(in: .whitespaces)
-                    UserDefaults.standard.set(trimmed, forKey: "cq_player_name")
+                    UserDefaults.standard.set(trimmedName, forKey: "cq_player_name")
                     onPlay()
                 } label: {
                     Text("Play")
@@ -57,7 +57,7 @@ struct PlayerNameEntryView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            name.trimmingCharacters(in: .whitespaces).isEmpty
+                            trimmedName.isEmpty
                                 ? LinearGradient(colors: [.gray, .gray],
                                                  startPoint: .leading, endPoint: .trailing)
                                 : LinearGradient(
@@ -67,7 +67,7 @@ struct PlayerNameEntryView: View {
                         )
                         .clipShape(Capsule())
                 }
-                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(trimmedName.isEmpty)
                 .padding(.horizontal, 32)
 
                 Spacer()
