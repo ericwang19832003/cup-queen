@@ -46,7 +46,7 @@ struct ContentView: View {
     @State private var ballGlow       = false
     @State private var showGameCenter = false
     @State private var showDuelLobby = false
-    @State private var showResetAlert = false
+    @State private var showSettings   = false
     @State private var showModes      = false
     @State private var showConflict  = false
     @State private var showNameEntry  = false
@@ -96,17 +96,26 @@ struct ContentView: View {
                     Spacer().frame(height: 8)
 
                     secondaryButtonRow
-                    Spacer().frame(height: 6)
-
-                    footerText
-                    Spacer().frame(height: 6)
-
-                    resetProgressButton
                     Spacer().frame(height: 24)
                 }
                 .padding(.horizontal, 22)
             }
             .ignoresSafeArea(edges: .top)
+            .overlay(alignment: .topLeading) {
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.white.opacity(0.35))
+                        .padding(.top, 62)
+                        .padding(.leading, 22)
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsSheet(onReset: {
+                    resetProgress()
+                    showSettings = false
+                })
+            }
             .sheet(isPresented: $showGameCenter) { GameCenterView() }
             .sheet(isPresented: $showNameEntry, onDismiss: {
                 if playWasTapped {
@@ -637,29 +646,6 @@ struct ContentView: View {
         .padding(.horizontal, 22)
     }
 
-    // MARK: - Footer
-
-    private var footerText: some View {
-        Text("Magic Show Arcade")
-            .font(.system(size: 10, weight: .medium))
-            .foregroundColor(.white.opacity(0.22))
-            .tracking(2.5)
-    }
-
-    private var resetProgressButton: some View {
-        Button("Reset Progress") {
-            showResetAlert = true
-        }
-        .font(.system(size: 11, weight: .regular, design: .rounded))
-        .foregroundColor(.white.opacity(0.22))
-        .alert("Reset Progress?", isPresented: $showResetAlert) {
-            Button("Reset", role: .destructive) { resetProgress() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will clear your level, score, and all wins. You'll restart from Level 1.")
-        }
-    }
-
     private func resetProgress() {
         let ud = UserDefaults.standard
         ud.removeObject(forKey: "cq_wins")
@@ -674,6 +660,69 @@ struct ContentView: View {
         savedBestSurvival = 0
         savedPrestige = 0
         modesUnlocked = false
+    }
+}
+
+// MARK: - Settings Sheet
+private struct SettingsSheet: View {
+    let onReset: () -> Void
+    @State private var showResetConfirm = false
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.05, green: 0.02, blue: 0.18),
+                         Color(red: 0.12, green: 0.04, blue: 0.26)],
+                startPoint: .top, endPoint: .bottom
+            ).ignoresSafeArea()
+
+            VStack(spacing: 28) {
+                HStack {
+                    Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white.opacity(0.35))
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+
+                Text("Settings")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+
+                VStack(spacing: 0) {
+                    Button {
+                        showResetConfirm = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.counterclockwise")
+                                .foregroundColor(.red.opacity(0.80))
+                            Text("Reset Progress")
+                                .font(.system(size: 16, design: .rounded))
+                                .foregroundColor(.red.opacity(0.80))
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    }
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .padding(.horizontal, 24)
+
+                Spacer()
+            }
+        }
+        .presentationDetents([.height(280)])
+        .alert("Reset Progress?", isPresented: $showResetConfirm) {
+            Button("Reset", role: .destructive) { onReset() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will clear your level, score, and all wins. You'll restart from Level 1.")
+        }
     }
 }
 
