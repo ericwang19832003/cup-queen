@@ -8,9 +8,16 @@ struct PlayerNameEntryView: View {
     /// Called when the player taps Play — name already saved when this fires.
     /// The Bool argument is `true` when the player chose Fresh Start.
     let onPlay: (Bool) -> Void
+    let initialStartFresh: Bool
 
     @State private var name: String = ""
-    @State private var startFresh: Bool = false
+    @State private var startFresh: Bool
+
+    init(initialStartFresh: Bool = false, onPlay: @escaping (Bool) -> Void) {
+        self.initialStartFresh = initialStartFresh
+        self.onPlay = onPlay
+        _startFresh = State(initialValue: initialStartFresh)
+    }
 
     @State private var savedLevel: Int = 1
 

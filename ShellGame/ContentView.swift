@@ -134,7 +134,7 @@ struct ContentView: View {
                     startFreshSelected = false  // dismissed without playing; reset for next time
                 }
             }) {
-                PlayerNameEntryView { startFresh in
+                PlayerNameEntryView(initialStartFresh: startFreshSelected) { startFresh in
                     startFreshSelected = startFresh
                     playWasTapped = true
                     showNameEntry = false
@@ -1041,6 +1041,7 @@ private struct IdleCupsView: View {
     @State private var rightY:  CGFloat = 0
     @State private var glowPulse = false
     @State private var ballGlow  = false
+    @State private var isActive  = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -1089,8 +1090,10 @@ private struct IdleCupsView: View {
                 glowPulse = true
             }
             // Staggered bob: left → centre → right, 3s total loop
+            isActive = true
             startBobLoop()
         }
+        .onDisappear { isActive = false }
     }
 
     private func bob(_ binding: Binding<CGFloat>, delay: Double) {
@@ -1103,6 +1106,7 @@ private struct IdleCupsView: View {
     }
 
     private func startBobLoop() {
+        guard isActive else { return }
         bob($leftY,   delay: 0.0)
         bob($centreY, delay: 0.6)
         bob($rightY,  delay: 1.2)
@@ -1121,12 +1125,15 @@ private struct DemoShuffleView: View {
     @State private var cupLifted: [Bool] = [false, false, false]
     @State private var glowBurst: Bool = false
     @State private var ballGlow:  Bool = false
+    @State private var isActive:  Bool = false
 
     // Fixed shuffle pairs (slot indices in positions array — not cup identity)
     // Centre↔Right, Left↔Centre, Centre↔Right, Left↔Centre
     private let shufflePairs: [(Int, Int)] = [(1,2),(0,1),(1,2),(0,1)]
 
     var body: some View {
+        GeometryReader { geo in
+        let halfWidth = geo.size.width / 2
         ZStack(alignment: .bottom) {
             // Spotlight
             Ellipse()
@@ -1157,33 +1164,37 @@ private struct DemoShuffleView: View {
                             .frame(width: 88, height: 108)
                             .offset(y: cupLifted[cup] ? -34 : 0)
 
-                        // Ball — only visible when ballVisible and this cup owns it
+                        // Ball under lifted cup — only during reveal (cup lifted + ballVisible)
                         if cup == ballOwner {
                             GoldenBallView(diameter: 30, glowPulse: ballGlow)
-                                .opacity(ballVisible ? 0 : 1)  // hidden when cup is down (covered)
-                                .offset(y: cupLifted[cup] ? 14 : 22)
+                                .opacity(ballVisible && cupLifted[cup] ? 1 : 0)
+                                .offset(y: 22)
                         }
                     }
-                    .position(x: positions[cup] + 195, y: 60)  // 195 = half of ~390 width
+                    .position(x: positions[cup] + halfWidth, y: 60)
                 }
 
-                // Ball visible on table BEFORE cup covers it (step 1) and at reveal (step 8)
+                // Ball on table — before cup covers it (step 1); hidden during shuffle/reveal
                 GoldenBallView(diameter: 30, glowPulse: ballGlow)
-                    .opacity(ballVisible ? 1 : 0)
-                    .position(x: positions[ballOwner] + 195, y: 95)
+                    .opacity(ballVisible && !cupLifted[ballOwner] ? 1 : 0)
+                    .position(x: positions[ballOwner] + halfWidth, y: 95)
             }
             .frame(height: 120)
             .padding(.bottom, 14)
         }
         .onAppear {
+            isActive = true
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
                 ballGlow = true
             }
             runDemoLoop()
         }
+        .onDisappear { isActive = false }
+        } // GeometryReader
     }
 
     private func runDemoLoop() {
+        guard isActive else { return }
         // Reset
         positions  = [-108, 0, 108]
         cupLifted  = [false, false, false]
