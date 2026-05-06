@@ -56,6 +56,7 @@ struct ContentView: View {
     @State private var startFreshSelected: Bool = false
     @State private var localSnap: [String: Any]  = [:]
     @State private var remoteSnap: [String: Any] = [:]
+    @State private var playerName: String = ""
 
     // Persisted best stats — read fresh each time view appears
     @State private var savedHighScore: Int = 0
@@ -147,6 +148,7 @@ struct ContentView: View {
                 savedBestSurvival = UserDefaults.standard.integer(forKey: "cq_bestSurvival")
                 savedPrestige     = UserDefaults.standard.integer(forKey: "cq_prestige")
                 modesUnlocked     = savedBestLevel >= 7
+                playerName        = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
                 SoundManager.shared.startHomeAmbient()   // Feature 1: home screen jazz
                 checkiCloudConflict()
             }
@@ -187,6 +189,7 @@ struct ContentView: View {
         savedBestSurvival = UserDefaults.standard.integer(forKey: "cq_bestSurvival")
         savedPrestige     = UserDefaults.standard.integer(forKey: "cq_prestige")
         modesUnlocked     = savedBestLevel >= 7
+        playerName        = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
     }
 
     private func checkiCloudConflict() {
@@ -300,15 +303,15 @@ struct ContentView: View {
                 .offset(x: 4, y: 2)
             }
 
-            // Prestige crown badges — shown when savedPrestige > 0
-            if savedPrestige > 0 {
-                HStack(spacing: 1) {
-                    ForEach(0..<min(savedPrestige, 3), id: \.self) { _ in
-                        Text("👑").font(.system(size: 13))
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 0)
+            // Personalized welcome greeting with inline prestige crowns
+            let trimmedName = playerName.trimmingCharacters(in: .whitespaces)
+            if !trimmedName.isEmpty {
+                let crowns = savedPrestige > 0 ? " " + String(repeating: "👑", count: min(savedPrestige, 3)) : ""
+                Text("Welcome back, \(trimmedName)\(crowns)")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.85))
+                    .kerning(1.5)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
