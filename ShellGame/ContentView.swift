@@ -953,3 +953,110 @@ private struct GoldenBallView: View {
         }
     }
 }
+
+// MARK: - Home Progress Card
+
+private struct HomeProgressCard: View {
+    let level: Int
+    let highScore: Int
+    let wins: Int
+    let prestigeCount: Int
+    let playerName: String
+    let bestSurvival: Int
+
+    private var isMaxLevel: Bool { level >= 30 }
+    private var progressFraction: CGFloat {
+        CGFloat(wins - (level - 1)) / 1.0
+    }
+    private var nextLevelLabel: String {
+        if isMaxLevel {
+            return bestSurvival > 0 ? "Survived \(bestSurvival) in a row" : "MAX LEVEL"
+        }
+        let winsNeeded = level - wins
+        let w = max(0, winsNeeded)
+        return w == 1 ? "1 win to L\(level + 1)" : "\(w) wins to L\(level + 1)"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Top row: level + score
+            HStack {
+                HStack(spacing: 5) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                    Text(isMaxLevel ? "MAX" : "Level \(level)")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+                }
+                Spacer()
+                HStack(spacing: 5) {
+                    Text("\(highScore) pts")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                }
+            }
+
+            // Progress bar or survival count
+            if isMaxLevel {
+                Text(nextLevelLabel)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.55))
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color.white.opacity(0.12))
+                                .frame(height: 6)
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(red: 1, green: 0.93, blue: 0.28),
+                                                 Color(red: 1, green: 0.68, blue: 0.05)],
+                                        startPoint: .leading, endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: geo.size.width * min(progressFraction, 1.0), height: 6)
+                        }
+                    }
+                    .frame(height: 6)
+                    Text(nextLevelLabel)
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.50))
+                }
+            }
+
+            // Greeting
+            let trimmed = playerName.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty {
+                let crowns = prestigeCount > 0 ? " " + String(repeating: "👑", count: min(prestigeCount, 3)) : ""
+                Text("Welcome back, \(trimmed)\(crowns)")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.85))
+                    .kerning(1.2)
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.black.opacity(0.32))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.55),
+                                         Color.purple.opacity(0.30),
+                                         Color.yellow.opacity(0.55)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                )
+        )
+    }
+}
