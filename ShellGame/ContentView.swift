@@ -1138,3 +1138,169 @@ private struct IdleCupsView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { startBobLoop() }
     }
 }
+
+// MARK: - Demo Shuffle View (new player)
+
+private struct DemoShuffleView: View {
+    // Cup X positions (slot-based): left=-108, centre=0, right=108, spacing accounts for cup width 88
+    @State private var positions: [CGFloat] = [-108, 0, 108]   // index = cup identity
+    @State private var ballOwner: Int = 1                        // cup index that holds ball
+    @State private var ballVisible: Bool = true                  // false when hidden under cup
+    @State private var cupLifted: [Bool] = [false, false, false]
+    @State private var glowBurst: Bool = false
+    @State private var ballGlow:  Bool = false
+
+    // Fixed shuffle pairs (slot indices in positions array — not cup identity)
+    // Centre↔Right, Left↔Centre, Centre↔Right, Left↔Centre
+    private let shufflePairs: [(Int, Int)] = [(1,2),(0,1),(1,2),(0,1)]
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // Spotlight
+            Ellipse()
+                .fill(Color.yellow.opacity(glowBurst ? 0.35 : 0.14))
+                .frame(width: 130, height: 40)
+                .blur(radius: 14)
+                .offset(y: -18)
+                .animation(.easeInOut(duration: 0.4), value: glowBurst)
+
+            // Felt strip
+            RoundedRectangle(cornerRadius: 6)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(red: 0.08, green: 0.28, blue: 0.14),
+                                 Color(red: 0.05, green: 0.18, blue: 0.09)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .frame(maxWidth: .infinity, maxHeight: 14)
+                .padding(.horizontal, 8)
+                .shadow(color: .black.opacity(0.55), radius: 10, y: 5)
+
+            // Cups + ball
+            ZStack(alignment: .bottom) {
+                ForEach(0..<3, id: \.self) { cup in
+                    ZStack(alignment: .bottom) {
+                        PreviewCupView(lit: cup == ballOwner && ballVisible)
+                            .frame(width: 88, height: 108)
+                            .offset(y: cupLifted[cup] ? -34 : 0)
+
+                        // Ball — only visible when ballVisible and this cup owns it
+                        if cup == ballOwner {
+                            GoldenBallView(diameter: 30, glowPulse: ballGlow)
+                                .opacity(ballVisible ? 0 : 1)  // hidden when cup is down (covered)
+                                .offset(y: cupLifted[cup] ? 14 : 22)
+                        }
+                    }
+                    .position(x: positions[cup] + 195, y: 60)  // 195 = half of ~390 width
+                }
+
+                // Ball visible on table BEFORE cup covers it (step 1) and at reveal (step 8)
+                GoldenBallView(diameter: 30, glowPulse: ballGlow)
+                    .opacity(ballVisible ? 1 : 0)
+                    .position(x: positions[ballOwner] + 195, y: 95)
+            }
+            .frame(height: 120)
+            .padding(.bottom, 14)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                ballGlow = true
+            }
+            runDemoLoop()
+        }
+    }
+
+    private func runDemoLoop() {
+        // Reset
+        positions  = [-108, 0, 108]
+        cupLifted  = [false, false, false]
+        ballOwner  = 1
+        ballVisible = true
+        glowBurst   = false
+
+        var t = 0.0
+
+        // Step 1: Ball visible (0.8s hold) — already set above
+        t += 0.8
+
+        // Step 2: Cover ball (centre cup lowers — hides ball)
+        after(t) {
+            ballVisible = false
+        }
+        t += 0.4
+
+        // Step 3: Pause
+        t += 0.5
+
+        // Step 4: Shuffle (4 pairs × 0.55s each)
+        for pair in shufflePairs {
+            let (a, b) = pair
+            after(t) { swapCups(a, b) }
+            t += 0.55
+        }
+        t += 0.3  // settle
+
+        // Step 5: All cups bob upward (inviting tap)
+        after(t) {
+            withAnimation(.easeInOut(duration: 0.30)) {
+                cupLifted = [true, true, true]
+            }
+        }
+        t += 0.30
+        after(t) {
+            withAnimation(.easeInOut(duration: 0.30)) {
+                cupLifted = [false, false, false]
+            }
+        }
+        t += 0.60
+
+        // Step 6: Misdirection — lift a wrong cup (left cup = index 0)
+        after(t) {
+            withAnimation(.easeInOut(duration: 0.25)) { cupLifted[0] = true }
+        }
+        t += 0.35
+        after(t) {
+            withAnimation(.easeInOut(duration: 0.25)) { cupLifted[0] = false }
+        }
+        t += 0.50
+
+        // Step 7: Beat pause (tension)
+        t += 0.70
+
+        // Step 8: Reveal correct cup
+        after(t) {
+            withAnimation(.easeInOut(duration: 0.35)) { cupLifted[ballOwner] = true }
+            ballVisible = true
+            withAnimation(.easeInOut(duration: 0.20)) { glowBurst = true }
+        }
+        t += 0.35
+
+        // Step 9: Hold on reveal (1.5s)
+        t += 1.5
+
+        // Step 10: Cover again, restart
+        after(t) {
+            withAnimation(.easeInOut(duration: 0.25)) { cupLifted[ballOwner] = false }
+            glowBurst = false
+        }
+        t += 0.5
+        after(t) { runDemoLoop() }
+    }
+
+    private func after(_ delay: Double, _ action: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: action)
+    }
+
+    private func swapCups(_ a: Int, _ b: Int) {
+        // Swap the x-positions of cups at indices a and b
+        withAnimation(.easeInOut(duration: 0.50)) {
+            let tmp = positions[a]
+            positions[a] = positions[b]
+            positions[b] = tmp
+        }
+        // Track ball owner
+        if ballOwner == a { ballOwner = b }
+        else if ballOwner == b { ballOwner = a }
+    }
+}
