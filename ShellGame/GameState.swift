@@ -35,7 +35,7 @@ enum GameMode {
 
 // MARK: - Persistence Keys
 
-private enum PK {
+enum PK {
     static let wins         = "cq_wins"
     static let highScore    = "cq_highScore"
     static let bestLevel    = "cq_bestLevel"
