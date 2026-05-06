@@ -53,6 +53,7 @@ struct ContentView: View {
     @State private var navigateToGame = false
     @State private var showLeaderboard = false
     @State private var playWasTapped   = false
+    @State private var startFreshSelected: Bool = false
     @State private var localSnap: [String: Any]  = [:]
     @State private var remoteSnap: [String: Any] = [:]
 
@@ -118,13 +119,14 @@ struct ContentView: View {
                     playWasTapped = false
                 }
             }) {
-                PlayerNameEntryView {
+                PlayerNameEntryView { startFresh in
+                    startFreshSelected = startFresh
                     playWasTapped = true
                     showNameEntry = false
                 }
             }
             .navigationDestination(isPresented: $navigateToGame) {
-                GameView()
+                GameView(startFresh: startFreshSelected)
             }
             .fullScreenCover(isPresented: $showDuelLobby) {
                 CompetitionView()

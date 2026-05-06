@@ -10,7 +10,14 @@ import SpriteKit
 
 struct GameView: View {
 
-    @StateObject private var gameState    = GameState()
+    @StateObject private var gameState: GameState
+
+    private let startFresh: Bool
+
+    init(startFresh: Bool = false) {
+        self.startFresh = startFresh
+        _gameState = StateObject(wrappedValue: GameState(mode: .solo, startFresh: startFresh))
+    }
     @State       private var scene:        GameScene?
     @State       private var coordinator:  Coordinator?   // retained here; scene holds weak ref
     @State       private var showLevelUp:    Bool = false

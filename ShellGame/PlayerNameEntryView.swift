@@ -6,9 +6,16 @@ import SwiftUI
 
 struct PlayerNameEntryView: View {
     /// Called when the player taps Play — name already saved when this fires.
-    let onPlay: () -> Void
+    /// The Bool argument is `true` when the player chose Fresh Start.
+    let onPlay: (Bool) -> Void
 
     @State private var name: String = ""
+    @State private var startFresh: Bool = false
+
+    private var savedLevel: Int {
+        let wins = UserDefaults.standard.integer(forKey: "cq_wins")
+        return min(wins + 1, 30)
+    }
 
     private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
 
@@ -47,9 +54,18 @@ struct PlayerNameEntryView: View {
                     }
                     .padding(.horizontal, 32)
 
+                if savedLevel > 1 {
+                    Picker("Start mode", selection: $startFresh) {
+                        Text("Continue  Lv.\(savedLevel)").tag(false)
+                        Text("Fresh Start").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 32)
+                }
+
                 Button {
                     UserDefaults.standard.set(trimmedName, forKey: "cq_player_name")
-                    onPlay()
+                    onPlay(startFresh)
                 } label: {
                     Text("Play")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -76,7 +92,7 @@ struct PlayerNameEntryView: View {
         .onAppear {
             name = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
         }
-        .presentationDetents([.height(320)])
+        .presentationDetents([.height(360)])
         .presentationDragIndicator(.visible)
     }
 }
