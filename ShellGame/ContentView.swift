@@ -824,6 +824,7 @@ private struct HostCharacterView: View {
 
 private struct PreviewCupView: View {
     let lit: Bool
+    var theme: CupTheme = .classicRed
 
     var body: some View {
         ZStack {
@@ -861,8 +862,8 @@ private struct PreviewCupView: View {
         body.addLine(to: CGPoint(x: 2,                y: h - 10))
         body.closeSubpath()
 
-        let topColor = lit ? Color(red: 0.82, green: 0.08, blue: 0.10) : Color(red: 0.48, green: 0.04, blue: 0.06)
-        let botColor = lit ? Color(red: 1.00, green: 0.16, blue: 0.16) : Color(red: 0.72, green: 0.07, blue: 0.08)
+        let topColor = lit ? theme.litTop : theme.unlitTop
+        let botColor = lit ? theme.litBot : theme.unlitBot
         ctx.fill(body, with: .linearGradient(
             Gradient(colors: [topColor, botColor]),
             startPoint: CGPoint(x: w * 0.5, y: 0),
@@ -1042,6 +1043,7 @@ private struct IdleCupsView: View {
     @State private var glowPulse = false
     @State private var ballGlow  = false
     @State private var isActive  = false
+    @State private var cupTheme: CupTheme = CosmeticState.shared.activeCup
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -1067,21 +1069,22 @@ private struct IdleCupsView: View {
 
             // Cups + ball
             HStack(spacing: 20) {
-                PreviewCupView(lit: false)
+                PreviewCupView(lit: false, theme: cupTheme)
                     .offset(y: leftY)
                 ZStack(alignment: .bottom) {
-                    PreviewCupView(lit: true)
+                    PreviewCupView(lit: true, theme: cupTheme)
                         .offset(y: centreY)
                     GoldenBallView(diameter: 26, glowPulse: ballGlow)
                         .offset(y: centreY + 18)
                 }
-                PreviewCupView(lit: false)
+                PreviewCupView(lit: false, theme: cupTheme)
                     .offset(y: rightY)
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 14)
         }
         .onAppear {
+            cupTheme = CosmeticState.shared.activeCup
             // Ball glow
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
                 ballGlow = true
@@ -1126,6 +1129,7 @@ private struct DemoShuffleView: View {
     @State private var glowBurst: Bool = false
     @State private var ballGlow:  Bool = false
     @State private var isActive:  Bool = false
+    @State private var cupTheme: CupTheme = CosmeticState.shared.activeCup
 
     // Fixed shuffle pairs (slot indices in positions array — not cup identity)
     // Centre↔Right, Left↔Centre, Centre↔Right, Left↔Centre
@@ -1160,7 +1164,7 @@ private struct DemoShuffleView: View {
             ZStack(alignment: .bottom) {
                 ForEach(0..<3, id: \.self) { cup in
                     ZStack(alignment: .bottom) {
-                        PreviewCupView(lit: cup == ballOwner && ballVisible)
+                        PreviewCupView(lit: cup == ballOwner && ballVisible, theme: cupTheme)
                             .frame(width: 88, height: 108)
                             .offset(y: cupLifted[cup] ? -34 : 0)
 
@@ -1184,6 +1188,7 @@ private struct DemoShuffleView: View {
         }
         .onAppear {
             isActive = true
+            cupTheme = CosmeticState.shared.activeCup
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
                 ballGlow = true
             }
