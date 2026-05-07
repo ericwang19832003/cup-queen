@@ -142,7 +142,7 @@ struct GameView: View {
                 SoundManager.shared.updatePhase(newPhase)
             }
 
-            // Streak: record round completion and surface any milestone toast
+            // Streak + cosmetic: record round completion and surface any toast
             if newPhase == .result {
                 let newMilestones = StreakManager.shared.recordRound()
                 if let day = newMilestones.sorted().first,
@@ -150,6 +150,11 @@ struct GameView: View {
                     withAnimation {
                         milestoneToast = "🔥 Day \(day) streak!\n\(reward) unlocked"
                     }
+                }
+                // Nature Pack unlock check (only toast if no streak milestone showing)
+                if milestoneToast == nil,
+                   let skinName = CosmeticState.shared.recordRound(mode: .solo) {
+                    withAnimation { milestoneToast = "\(skinName) unlocked!" }
                 }
             }
 
