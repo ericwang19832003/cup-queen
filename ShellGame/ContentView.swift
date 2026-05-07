@@ -41,6 +41,7 @@ struct ContentView: View {
     @State private var modesUnlocked: Bool = false
     @State private var savedCompetitionWins: Int = 0
     @State private var savedStreakCount: Int = 0
+    @StateObject private var cosmeticState = CosmeticState.shared
     @State private var showCustomize: Bool = false
 
     var body: some View {
@@ -666,6 +667,14 @@ struct ContentView: View {
                         .overlay(RoundedRectangle(cornerRadius: 14)
                             .strokeBorder(Color(red: 1, green: 0.60, blue: 0.80).opacity(0.40), lineWidth: 1.5))
                 )
+                .overlay(alignment: .topTrailing) {
+                    if cosmeticState.hasUnseenUnlock {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 8, height: 8)
+                            .offset(x: -6, y: 6)
+                    }
+                }
             }
 
             // Modes
