@@ -10,6 +10,7 @@ struct GauntletView: View {
     @State private var scene: GameScene?
     @State private var coordinator: GauntletCoordinator?
     @State private var showLevelUp = false
+    @State private var cosmeticToast: String? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -194,6 +195,10 @@ struct GauntletView: View {
             Color.black.opacity(0.72).ignoresSafeArea()
                 .onAppear {
                     GameCenterManager.shared.submitGauntletScore(gameState.score)
+                    if gameState.gauntletComplete,
+                       let skinName = CosmeticState.shared.recordRound(mode: .gauntlet) {
+                        withAnimation { cosmeticToast = "\(skinName) unlocked!" }
+                    }
                 }
 
             VStack(spacing: 20) {
@@ -239,6 +244,25 @@ struct GauntletView: View {
                                       lineWidth: 1.5))
             )
             .padding(.horizontal, 30)
+
+            // Cosmetic unlock toast
+            if let toast = cosmeticToast {
+                VStack {
+                    Spacer()
+                    Text(toast)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20).padding(.vertical, 10)
+                        .background(Capsule().fill(Color(red: 0.10, green: 0.06, blue: 0.28).opacity(0.92)))
+                        .padding(.bottom, 24)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task(id: cosmeticToast) {
+                    guard cosmeticToast != nil else { return }
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    withAnimation { cosmeticToast = nil }
+                }
+            }
         }
     }
 
