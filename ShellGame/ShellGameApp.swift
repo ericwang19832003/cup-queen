@@ -10,6 +10,7 @@
 //   GAMECENTER: GKLocalPlayer.local.authenticateHandler for leaderboards
 
 import SwiftUI
+import UserNotifications
 
 @main
 struct ShellGameApp: App {
@@ -21,6 +22,13 @@ struct ShellGameApp: App {
         // TODO: ADMOB     — AdManager.shared.configure()  ← uncomment after adding SDK
         Task { await PurchaseManager.shared.checkExistingEntitlements() }
         GameCenterManager.shared.authenticate()
+        Task {
+            try? await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])
+            if StreakManager.shared.streakCount > 0 {
+                StreakManager.shared.scheduleReminder()
+            }
+        }
     }
 
     var body: some Scene {
@@ -99,6 +107,14 @@ final class AdManager {
     }
 
     // MARK: - Rewarded (hint feature)
+
+    /// Shows a rewarded ad; on completion, awards one streak shield.
+    @MainActor
+    func showShieldRewardedAd() {
+        showRewardedAd {
+            StreakManager.shared.addShield()
+        }
+    }
 
     func preloadRewardedAd() {
         guard !adsRemoved else { return }

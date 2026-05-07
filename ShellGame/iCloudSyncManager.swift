@@ -13,7 +13,11 @@ final class iCloudSyncManager {
     static let syncKeys: [String] = [
         "cq_wins", "cq_highScore", "cq_bestLevel", "cq_ftue_done",
         "cq_bestSurvival", "cq_best_gauntlet", "cq_prestige",
-        "cq_daily_streak", "cq_daily_last_date"
+        "cq_daily_streak", "cq_daily_last_date",
+        "cq_ps_count", "cq_ps_last_day", "cq_ps_shields", "cq_ps_milestones",
+        "cq_competition_wins",
+        "cq_cos_cup", "cq_cos_ball", "cq_cos_table",
+        "cq_cos_unlocked_cups", "cq_cos_unlocked_balls", "cq_cos_unlocked_tables"
     ]
 
     private init() {}
