@@ -13,6 +13,7 @@
 
 import SpriteKit
 import UIKit
+import SwiftUI
 
 /// Deterministic LCG random number generator for reproducible shuffles.
 private struct SeededRNG: RandomNumberGenerator {
@@ -152,6 +153,7 @@ final class GameScene: SKScene {
     private var cupNodes: [SKNode] = []          // [cupIndex] → container node
     private var ballNode: SKShapeNode!
     private var ballGlowNode: SKShapeNode!
+    private var feltNode: SKShapeNode?           // casino table surface — recolored by applyCosmetics()
 
     // MARK: Slot / Cup Tracking
     // slotsOccupied[slotIndex] = cupIndex   (which cup is at which slot)
@@ -183,6 +185,7 @@ final class GameScene: SKScene {
         setupBackground()
         setupCups(config: LevelConfig.config(for: level))
         setupBall()
+        applyCosmetics()
     }
 
     // MARK: - Visual Setup
@@ -198,6 +201,7 @@ final class GameScene: SKScene {
         felt.lineWidth  = 3
         felt.position   = CGPoint(x: 0, y: -size.height * 0.06)
         felt.zPosition  = -10
+        feltNode = felt
         addChild(felt)
 
         // Gold top-trim line
@@ -268,7 +272,7 @@ final class GameScene: SKScene {
             container.addChild(shadow)
 
             let body = SKSpriteNode(
-                texture: renderCupTexture(size: currentCupSize),
+                texture: renderCupTexture(size: currentCupSize, theme: CosmeticState.shared.activeCup),
                 size:    currentCupSize
             )
             container.addChild(body)
@@ -276,9 +280,8 @@ final class GameScene: SKScene {
         }
     }
 
-    /// Renders a casino-style magic cup into a UIImage-backed SKTexture.
-    /// TODO: SKINS — replace with SkinManager.shared.currentSkin.cupTexture
-    private func renderCupTexture(size: CGSize) -> SKTexture {
+    /// Renders a casino-style magic cup into a UIImage-backed SKTexture using the given CupTheme.
+    private func renderCupTexture(size: CGSize, theme: CupTheme) -> SKTexture {
         let renderer = UIGraphicsImageRenderer(size: size)
         let img = renderer.image { ctx in
             let c = ctx.cgContext
@@ -300,16 +303,25 @@ final class GameScene: SKScene {
             path.addLine(to: bl)
             path.closeSubpath()
 
-            // Body — top-lit vertical gradient for 3D depth
+            // Body — top-lit vertical gradient for 3D depth.
+            // unlitTop → litTop (bright highlight) → unlitBot → darkened unlitBot
+            let topColor = UIColor(theme.unlitTop)
+            let litColor = UIColor(theme.litTop)
+            let midColor = UIColor(theme.unlitBot)
+            // Dark base: unlitBot channels scaled to 35% for shadow depth.
+            var dr: CGFloat = 0, dg: CGFloat = 0, db: CGFloat = 0
+            midColor.getRed(&dr, green: &dg, blue: &db, alpha: nil)
+            let baseColor = UIColor(red: dr * 0.35, green: dg * 0.35, blue: db * 0.35, alpha: 1)
+
             c.addPath(path)
             c.clip()
             let bodyGrad = CGGradient(
                 colorsSpace: CGColorSpaceCreateDeviceRGB(),
                 colors: [
-                    UIColor(red: 0.72, green: 0.08, blue: 0.08, alpha: 1).cgColor,   // top
-                    UIColor(red: 0.96, green: 0.15, blue: 0.12, alpha: 1).cgColor,   // bright highlight
-                    UIColor(red: 0.68, green: 0.07, blue: 0.07, alpha: 1).cgColor,   // mid
-                    UIColor(red: 0.30, green: 0.02, blue: 0.02, alpha: 1).cgColor    // dark base
+                    topColor.cgColor,   // top (unlit)
+                    litColor.cgColor,   // bright highlight (lit)
+                    midColor.cgColor,   // mid (unlit bottom)
+                    baseColor.cgColor   // dark base
                 ] as CFArray,
                 locations: [0.0, 0.27, 0.62, 1.0]
             )!
@@ -419,6 +431,27 @@ final class GameScene: SKScene {
         ballNode.addChild(sheen2)
 
         addChild(ballNode)
+    }
+
+    // MARK: - Cosmetics
+
+    /// Reads CosmeticState and applies the active cup and table themes.
+    /// Regenerates cup body textures (since the cup is drawn via UIGraphicsImageRenderer)
+    /// and recolors the felt background node.
+    private func applyCosmetics() {
+        let cupTheme   = CosmeticState.shared.activeCup
+        let tableTheme = CosmeticState.shared.activeTable
+
+        // Recolor the felt surface.
+        feltNode?.fillColor = SKColor(tableTheme.topColor)
+
+        // Regenerate cup textures for every cup node using the active CupTheme.
+        for container in cupNodes {
+            // The body is the first SKSpriteNode child of the container.
+            if let body = container.children.first(where: { $0 is SKSpriteNode }) as? SKSpriteNode {
+                body.texture = renderCupTexture(size: body.size, theme: cupTheme)
+            }
+        }
     }
 
     // MARK: - Public Game Flow API
@@ -782,5 +815,17 @@ final class GameScene: SKScene {
             revealTappedCup(i)
             return
         }
+    }
+}
+
+// MARK: - SKColor + SwiftUI.Color
+
+/// Convenience init so GameScene can convert SwiftUI Color values from CosmeticState
+/// into SKColor (UIColor) without touching the SpriteKit API surface.
+/// Requires iOS 14+ (UIColor(color:) initializer). Minimum deployment target is iOS 16.
+private extension SKColor {
+    convenience init(_ color: SwiftUI.Color) {
+        let ui = UIColor(color)
+        self.init(cgColor: ui.cgColor)
     }
 }
