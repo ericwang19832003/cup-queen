@@ -41,7 +41,7 @@ struct ContentView: View {
     @State private var modesUnlocked: Bool = false
     @State private var savedCompetitionWins: Int = 0
     @State private var savedStreakCount: Int = 0
-    @StateObject private var cosmeticState = CosmeticState.shared
+    @ObservedObject private var cosmeticState = CosmeticState.shared
     @State private var showCustomize: Bool = false
 
     var body: some View {

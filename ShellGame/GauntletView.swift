@@ -195,6 +195,7 @@ struct GauntletView: View {
             Color.black.opacity(0.72).ignoresSafeArea()
                 .onAppear {
                     GameCenterManager.shared.submitGauntletScore(gameState.score)
+                    // Only a perfect run (all 7 levels) counts toward Sunset Orange unlock.
                     if gameState.gauntletComplete,
                        let skinName = CosmeticState.shared.recordRound(mode: .gauntlet) {
                         withAnimation { cosmeticToast = "\(skinName) unlocked!" }
