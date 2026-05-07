@@ -10,6 +10,7 @@ struct DailyChallengeView: View {
     @State private var scene: GameScene?
     @State private var coordinator: DailyCoordinator?
     @State private var alreadyAttempted = false
+    @State private var cosmeticToast: String? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -134,6 +135,9 @@ struct DailyChallengeView: View {
                 .onAppear {
                     gameState.recordDailyAttempt(won: won)
                     GameCenterManager.shared.submitDailyScore(won ? 1 : 0)
+                    if let skinName = CosmeticState.shared.recordRound(mode: .daily) {
+                        withAnimation { cosmeticToast = "\(skinName) unlocked!" }
+                    }
                 }
             VStack(spacing: 20) {
                 Text(won ? "🎯" : "😮").font(.system(size: 74))
@@ -169,6 +173,25 @@ struct DailyChallengeView: View {
                         .strokeBorder(Color(red: 0.30, green: 0.75, blue: 1.00).opacity(0.50), lineWidth: 1.5))
             )
             .padding(.horizontal, 30)
+
+            // Cosmetic unlock toast
+            if let toast = cosmeticToast {
+                VStack {
+                    Spacer()
+                    Text(toast)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20).padding(.vertical, 10)
+                        .background(Capsule().fill(Color(red: 0.02, green: 0.08, blue: 0.28).opacity(0.92)))
+                        .padding(.bottom, 24)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task(id: cosmeticToast) {
+                    guard cosmeticToast != nil else { return }
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    withAnimation { cosmeticToast = nil }
+                }
+            }
         }
     }
 
