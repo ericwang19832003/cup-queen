@@ -564,3 +564,52 @@ final class StartFreshTests: XCTestCase {
         XCTAssertEqual(state.level, 5) // unchanged default behaviour
     }
 }
+
+// MARK: - StreakManagerTests
+
+final class StreakManagerTests: XCTestCase {
+
+    override func setUp() {
+        super.setUp()
+        // Wipe all streak keys so each test starts clean.
+        ["cq_ps_count", "cq_ps_last_day", "cq_ps_shields", "cq_ps_milestones"].forEach {
+            UserDefaults.standard.removeObject(forKey: $0)
+        }
+        // Reset shields to 0 directly via UserDefaults (avoids negative-clamp side effects).
+        UserDefaults.standard.set(0, forKey: "cq_ps_shields")
+        // Reload the singleton's in-memory state from the now-cleared defaults.
+        StreakManager.shared.reloadFromDefaults()
+    }
+
+    func test_firstRound_setsStreakToOne() {
+        let milestones = StreakManager.shared.recordRound()
+        XCTAssertEqual(StreakManager.shared.streakCount, 1)
+        XCTAssertTrue(milestones.isEmpty, "No milestones at day 1")
+    }
+
+    func test_sameDay_isIdempotent() {
+        StreakManager.shared.recordRound()
+        let before = StreakManager.shared.streakCount
+        StreakManager.shared.recordRound()
+        XCTAssertEqual(StreakManager.shared.streakCount, before)
+    }
+
+    func test_addShield_cappedAtThree() {
+        StreakManager.shared.addShields(5)
+        XCTAssertEqual(StreakManager.shared.shields, StreakManager.maxShields)
+    }
+
+    func test_addShields_incrementsCorrectly() {
+        StreakManager.shared.addShields(2)
+        XCTAssertEqual(StreakManager.shared.shields, 2)
+    }
+
+    func test_milestoneRewards_containsExpectedDays() {
+        let days = Set(StreakManager.milestoneRewards.keys)
+        XCTAssertTrue(days.contains(3))
+        XCTAssertTrue(days.contains(7))
+        XCTAssertTrue(days.contains(30))
+        XCTAssertTrue(days.contains(100))
+        XCTAssertTrue(days.contains(365))
+    }
+}
