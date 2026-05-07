@@ -153,14 +153,30 @@ final class PurchaseManager {
         transactionListener = listenForTransactions()
     }
 
-    private let productID = "com.shellgame.magiccup.removeads"
+    private enum ProductID {
+        static let removeAds    = "com.shellgame.magiccup.removeads"
+        static let cupGold      = "com.shellgame.magiccup.cosmetic.goldcup"
+        static let cupMidnight  = "com.shellgame.magiccup.cosmetic.midnight"
+        static let cupDiamond   = "com.shellgame.magiccup.cosmetic.diamond"
+        static let ballCrystal  = "com.shellgame.magiccup.cosmetic.crystal"
+        static let tableNeon    = "com.shellgame.magiccup.cosmetic.neonpurple"
+        static let tableMidBlue = "com.shellgame.magiccup.cosmetic.midnightblue"
+        static let starterPack  = "com.shellgame.magiccup.cosmetic.starterpack"
+        static let shieldThree  = "com.shellgame.magiccup.streakshield3"
+
+        static let all: [String] = [
+            removeAds, cupGold, cupMidnight, cupDiamond,
+            ballCrystal, tableNeon, tableMidBlue, starterPack, shieldThree
+        ]
+    }
+
     private var transactionListener: Task<Void, Never>?
 
     // MARK: - Products
 
     /// Fetches the Remove Ads product. Returns nil if not yet configured in ASC.
     func fetchProduct() async -> Product? {
-        try? await Product.products(for: [productID]).first
+        try? await Product.products(for: [ProductID.removeAds]).first
     }
 
     // MARK: - Purchase
@@ -204,10 +220,12 @@ final class PurchaseManager {
 
     func checkExistingEntitlements() async {
         for await result in Transaction.currentEntitlements {
-            guard let transaction = try? checkVerified(result),
-                  transaction.productID == productID else { continue }
+            guard let transaction = try? checkVerified(result) else { continue }
             await transaction.finish()
-            AdManager.shared.markAdsRemoved()
+            if transaction.productID == ProductID.removeAds {
+                AdManager.shared.markAdsRemoved()
+            }
+            applyCosmetic(productID: transaction.productID)
         }
     }
 
@@ -217,11 +235,54 @@ final class PurchaseManager {
         Task.detached { [weak self] in
             guard let self else { return }
             for await result in Transaction.updates {
-                guard let transaction = try? self.checkVerified(result),
-                      transaction.productID == self.productID else { continue }
+                guard let transaction = try? self.checkVerified(result) else { continue }
                 await transaction.finish()
-                AdManager.shared.markAdsRemoved()
+                if transaction.productID == ProductID.removeAds {
+                    AdManager.shared.markAdsRemoved()
+                }
+                self.applyCosmetic(productID: transaction.productID)
             }
+        }
+    }
+
+    // MARK: - Cosmetic purchases
+
+    enum PurchaseError: Error {
+        case productNotFound
+    }
+
+    /// Purchase a cosmetic item or the streak shield 3-pack.
+    /// On success, unlocks the appropriate CosmeticState items.
+    func purchaseCosmetic(productID: String) async throws {
+        let products = try await Product.products(for: [productID])
+        guard let product = products.first else {
+            throw PurchaseError.productNotFound
+        }
+        let result = try await product.purchase()
+        switch result {
+        case .success(let verification):
+            let transaction = try checkVerified(verification)
+            applyCosmetic(productID: transaction.productID)
+            await transaction.finish()
+        case .userCancelled, .pending:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    private func applyCosmetic(productID: String) {
+        let c = CosmeticState.shared
+        switch productID {
+        case ProductID.cupGold:      c.unlockCup(id: "goldCup")
+        case ProductID.cupMidnight:  c.unlockCup(id: "midnight")
+        case ProductID.cupDiamond:   c.unlockCup(id: "diamond")
+        case ProductID.ballCrystal:  c.unlockBall(id: "crystal")
+        case ProductID.tableNeon:    c.unlockTable(id: "neonPurple")
+        case ProductID.tableMidBlue: c.unlockTable(id: "midnightBlue")
+        case ProductID.starterPack:  c.unlockStarterPack()
+        case ProductID.shieldThree:  StreakManager.shared.addShields(3)
+        default: break
         }
     }
 
