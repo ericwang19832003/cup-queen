@@ -39,6 +39,8 @@ struct ContentView: View {
     @State private var savedBestSurvival: Int = 0
     @State private var savedPrestige: Int  = 0
     @State private var modesUnlocked: Bool = false
+    @State private var savedCompetitionWins: Int = 0
+    @State private var showCustomize: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -61,7 +63,9 @@ struct ContentView: View {
                             wins: UserDefaults.standard.integer(forKey: "cq_wins"),
                             prestigeCount: savedPrestige,
                             playerName: playerName,
-                            bestSurvival: savedBestSurvival
+                            bestSurvival: savedBestSurvival,
+                            streakCount: StreakManager.shared.streakCount,
+                            rankBadge: rankBadge
                         )
                         Spacer().frame(height: 12)
 
@@ -161,6 +165,7 @@ struct ContentView: View {
                 savedPrestige     = UserDefaults.standard.integer(forKey: "cq_prestige")
                 modesUnlocked     = savedBestLevel >= 7
                 playerName        = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
+                savedCompetitionWins = UserDefaults.standard.integer(forKey: "cq_competition_wins")
                 SoundManager.shared.startHomeAmbient()   // Feature 1: home screen jazz
                 checkiCloudConflict()
             }
@@ -188,6 +193,7 @@ struct ContentView: View {
                 )
                 .interactiveDismissDisabled(true)
             }
+            .sheet(isPresented: $showCustomize) { CustomizeView() }
             .onChange(of: showDuelLobby) { isShowing in
                 // Restart home ambient when competition fullScreenCover is dismissed
                 // (ContentView stays in hierarchy during fullScreenCover so onAppear won't re-fire)
@@ -495,6 +501,19 @@ struct ContentView: View {
 
     private var isReturningPlayer: Bool { savedHighScore > 0 }
 
+    private var rankTier: Int {
+        let wins = savedCompetitionWins
+        let atMaxLevel = savedBestLevel >= 7
+        if wins >= 300 && atMaxLevel { return 4 }
+        if wins >= 150 { return 3 }
+        if wins >= 50  { return 2 }
+        if wins >= 10  { return 1 }
+        return 0
+    }
+
+    private var rankBadge: String { ["🥉","🥈","🥇","💎","👑"][rankTier] }
+    private var rankName:  String { ["Bronze","Silver","Gold","Diamond","Master"][rankTier] }
+
     private var idleCupsSection: some View {
         IdleCupsView()
             .frame(height: 130)
@@ -623,6 +642,25 @@ struct ContentView: View {
                         .fill(Color.white.opacity(0.07))
                         .overlay(RoundedRectangle(cornerRadius: 14)
                             .strokeBorder(Color.yellow.opacity(0.45), lineWidth: 1.5))
+                )
+            }
+
+            // Style
+            Button { showCustomize = true } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: "paintbrush.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Style")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundColor(Color(red: 1, green: 0.60, blue: 0.80))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color(red: 0.35, green: 0.05, blue: 0.20).opacity(0.22))
+                        .overlay(RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(Color(red: 1, green: 0.60, blue: 0.80).opacity(0.40), lineWidth: 1.5))
                 )
             }
 
@@ -936,6 +974,8 @@ private struct HomeProgressCard: View {
     let prestigeCount: Int
     let playerName: String
     let bestSurvival: Int
+    let streakCount: Int
+    let rankBadge: String
 
     private var isMaxLevel: Bool { level >= 30 }
     private var progressFraction: CGFloat {
@@ -1011,6 +1051,24 @@ private struct HomeProgressCard: View {
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.85))
                     .kerning(1.2)
+            }
+
+            // Streak + rank row
+            HStack(spacing: 8) {
+                if streakCount > 0 {
+                    HStack(spacing: 4) {
+                        Text("🔥")
+                        Text("\(streakCount) day streak")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(Color(red: 1, green: 0.68, blue: 0.05))
+                    }
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Color(red: 1, green: 0.68, blue: 0.05).opacity(0.12))
+                    .clipShape(Capsule())
+                }
+                Text(rankBadge)
+                    .font(.system(size: 14))
+                Spacer()
             }
         }
         .padding(.horizontal, 18)
