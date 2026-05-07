@@ -33,6 +33,7 @@ struct CustomizeView: View {
                                     isActive: cosmetics.activeCup.id == theme.id,
                                     isUnlocked: cosmetics.unlockedCups.contains(theme.id),
                                     isPurchasing: isPurchasing,
+                                    progress: cosmetics.progress(for: theme.id),
                                     onSelect: { cosmetics.selectCup(theme) },
                                     onPurchase: { purchase(productID: CosmeticState.purchasableCups[theme.id]) }
                                 )
@@ -81,6 +82,9 @@ struct CustomizeView: View {
             } message: {
                 Text(purchaseError ?? "")
             }
+            .onAppear {
+                CosmeticState.shared.clearUnseenUnlock()
+            }
         }
     }
 
@@ -106,6 +110,7 @@ private struct CupSkinCell: View {
     let isActive: Bool
     let isUnlocked: Bool
     let isPurchasing: Bool
+    let progress: (current: Int, required: Int, label: String)?
     let onSelect: () -> Void
     let onPurchase: () -> Void
 
@@ -138,8 +143,21 @@ private struct CupSkinCell: View {
                     .background(Color(red: 1, green: 0.85, blue: 0.28))
                     .clipShape(Capsule())
                     .disabled(isPurchasing)
+            } else if let prog = progress {
+                VStack(spacing: 2) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.35))
+                    Text("\(prog.current) / \(prog.required)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.60))
+                    Text(prog.label)
+                        .font(.system(size: 9, design: .rounded))
+                        .foregroundColor(.white.opacity(0.35))
+                        .lineLimit(1)
+                }
             } else {
-                // Milestone-only
+                // Milestone-only (no progress path)
                 Image(systemName: "lock.fill")
                     .font(.system(size: 11))
                     .foregroundColor(.white.opacity(0.35))
