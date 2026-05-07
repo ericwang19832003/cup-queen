@@ -217,9 +217,9 @@ final class CosmeticState: ObservableObject {
 
     private func load() {
         let ud = UserDefaults.standard
-        if let arr = ud.array(forKey: K.unlockedCups)   as? [String] { unlockedCups   = Set(arr) }
-        if let arr = ud.array(forKey: K.unlockedBalls)  as? [String] { unlockedBalls  = Set(arr) }
-        if let arr = ud.array(forKey: K.unlockedTables) as? [String] { unlockedTables = Set(arr) }
+        if let arr = ud.array(forKey: K.unlockedCups)   as? [String] { unlockedCups   = Set(arr).union(["classicRed"]) }
+        if let arr = ud.array(forKey: K.unlockedBalls)  as? [String] { unlockedBalls  = Set(arr).union(["golden"]) }
+        if let arr = ud.array(forKey: K.unlockedTables) as? [String] { unlockedTables = Set(arr).union(["greenFelt"]) }
 
         if let id = ud.string(forKey: K.activeCup),
            let t  = CupTheme.all.first(where: { $0.id == id }) { activeCup = t }
@@ -227,5 +227,9 @@ final class CosmeticState: ObservableObject {
            let t  = BallTheme.all.first(where: { $0.id == id }) { activeBall = t }
         if let id = ud.string(forKey: K.activeTable),
            let t  = TableTheme.all.first(where: { $0.id == id }) { activeTable = t }
+
+        if !unlockedCups.contains(activeCup.id)     { activeCup   = .classicRed }
+        if !unlockedBalls.contains(activeBall.id)   { activeBall  = .golden }
+        if !unlockedTables.contains(activeTable.id) { activeTable = .greenFelt }
     }
 }
