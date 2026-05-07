@@ -109,11 +109,10 @@ struct GameView: View {
                         .padding(.bottom, 40)
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
-                .onAppear {
-                    Task {
-                        try? await Task.sleep(nanoseconds: 3_000_000_000)
-                        withAnimation { milestoneToast = nil }
-                    }
+                .task(id: milestoneToast) {
+                    guard milestoneToast != nil else { return }
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    withAnimation { milestoneToast = nil }
                 }
             }
         }
@@ -693,7 +692,7 @@ struct GameView: View {
     private func shareSession() {
         let stats = ShareStats(
             level: gameState.level,
-            score: gameState.score,
+            score: gameState.highScore,
             survival: gameState.survivalCount,
             streakCount: StreakManager.shared.streakCount,
             playerName: UserDefaults.standard.string(forKey: "cq_player_name") ?? "",
