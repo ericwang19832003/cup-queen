@@ -225,7 +225,7 @@ final class PurchaseManager {
             if transaction.productID == ProductID.removeAds {
                 AdManager.shared.markAdsRemoved()
             }
-            applyCosmetic(productID: transaction.productID)
+            await MainActor.run { applyCosmetic(productID: transaction.productID) }
         }
     }
 
@@ -240,7 +240,7 @@ final class PurchaseManager {
                 if transaction.productID == ProductID.removeAds {
                     AdManager.shared.markAdsRemoved()
                 }
-                self.applyCosmetic(productID: transaction.productID)
+                await MainActor.run { self.applyCosmetic(productID: transaction.productID) }
             }
         }
     }
@@ -253,6 +253,7 @@ final class PurchaseManager {
 
     /// Purchase a cosmetic item or the streak shield 3-pack.
     /// On success, unlocks the appropriate CosmeticState items.
+    @MainActor
     func purchaseCosmetic(productID: String) async throws {
         let products = try await Product.products(for: [productID])
         guard let product = products.first else {
@@ -262,7 +263,7 @@ final class PurchaseManager {
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
-            applyCosmetic(productID: transaction.productID)
+            await MainActor.run { applyCosmetic(productID: transaction.productID) }
             await transaction.finish()
         case .userCancelled, .pending:
             break
