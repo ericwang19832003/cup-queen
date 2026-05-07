@@ -17,7 +17,8 @@ final class iCloudSyncManager {
         "cq_ps_count", "cq_ps_last_day", "cq_ps_shields", "cq_ps_milestones",
         "cq_competition_wins",
         "cq_cos_cup", "cq_cos_ball", "cq_cos_table",
-        "cq_cos_unlocked_cups", "cq_cos_unlocked_balls", "cq_cos_unlocked_tables"
+        "cq_cos_unlocked_cups", "cq_cos_unlocked_balls", "cq_cos_unlocked_tables",
+        "cq_daily_completed", "cq_gauntlet_completed", "cq_total_rounds"
     ]
 
     private init() {}
