@@ -83,7 +83,7 @@ struct CustomizeView: View {
                 Text(purchaseError ?? "")
             }
             .onAppear {
-                CosmeticState.shared.clearUnseenUnlock()
+                cosmetics.clearUnseenUnlock()
             }
         }
     }
