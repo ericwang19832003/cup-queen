@@ -194,6 +194,11 @@ final class CosmeticState: ObservableObject {
         static let gauntletCompleted = "cq_gauntlet_completed"
         static let totalRounds       = "cq_total_rounds"
         static let hasUnseenUnlock   = "cq_has_unseen_unlock"
+
+        // Read-only keys owned by other systems — referenced here for unlock checks.
+        static let bestLevel        = "cq_bestLevel"
+        static let competitionWins  = "cq_competition_wins"
+        static let streakCount      = "cq_ps_count"
     }
 
     // Which cup/ball/table IDs require IAP (vs. milestone-only or free).
@@ -291,15 +296,15 @@ final class CosmeticState: ObservableObject {
         case "oceanTeal":
             return (min(ud.integer(forKey: K.dailyCompleted), 5), 5, "Daily Challenges")
         case "emeraldForest":
-            return (min(ud.integer(forKey: "cq_bestLevel"), 10), 10, "Solo Level")
+            return (min(ud.integer(forKey: K.bestLevel), 10), 10, "Solo Level")
         case "roseGold":
-            return (min(ud.integer(forKey: "cq_competition_wins"), 25), 25, "Duel Wins")
+            return (min(ud.integer(forKey: K.competitionWins), 25), 25, "Duel Wins")
         case "marbleWhite":
             return (min(ud.integer(forKey: K.totalRounds), 50), 50, "Rounds Played")
         case "sunsetOrange":
             return (min(ud.integer(forKey: K.gauntletCompleted), 3), 3, "Gauntlets Completed")
         case "arcticIce":
-            return (min(ud.integer(forKey: "cq_ps_count"), 14), 14, "Day Streak")
+            return (min(ud.integer(forKey: K.streakCount), 14), 14, "Day Streak")
         default:
             return nil
         }
@@ -315,11 +320,11 @@ final class CosmeticState: ObservableObject {
         let ud = UserDefaults.standard
         let thresholds: [(String, String, Bool)] = [
             ("oceanTeal",     "🌊 Ocean Teal",     ud.integer(forKey: K.dailyCompleted) >= 5),
-            ("emeraldForest", "🌿 Emerald Forest",  ud.integer(forKey: "cq_bestLevel") >= 10),
-            ("roseGold",      "🌸 Rose Gold",       ud.integer(forKey: "cq_competition_wins") >= 25),
+            ("emeraldForest", "🌿 Emerald Forest",  ud.integer(forKey: K.bestLevel) >= 10),
+            ("roseGold",      "🌸 Rose Gold",       ud.integer(forKey: K.competitionWins) >= 25),
             ("marbleWhite",   "🤍 Marble White",    ud.integer(forKey: K.totalRounds) >= 50),
             ("sunsetOrange",  "🌅 Sunset Orange",   ud.integer(forKey: K.gauntletCompleted) >= 3),
-            ("arcticIce",     "🧊 Arctic Ice",      ud.integer(forKey: "cq_ps_count") >= 14),
+            ("arcticIce",     "🧊 Arctic Ice",      ud.integer(forKey: K.streakCount) >= 14),
         ]
         var firstName: String? = nil
         for (id, name, met) in thresholds where met && !unlockedCups.contains(id) {
