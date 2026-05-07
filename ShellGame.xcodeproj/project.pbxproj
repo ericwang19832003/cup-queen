@@ -51,6 +51,7 @@
 		AB2000000000000000000001 /* GameStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000001 /* GameStateTests.swift */; };
 		AA2000000000000000000020 /* StreakManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000020 /* StreakManager.swift */; };
 		AA2000000000000000000021 /* CosmeticState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000021 /* CosmeticState.swift */; };
+		AA2000000000000000000022 /* CustomizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000022 /* CustomizeView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -83,6 +84,7 @@
 		AB1000000000000000000002 /* ShellGameTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ShellGameTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA1000000000000000000020 /* StreakManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakManager.swift; sourceTree = "<group>"; };
 		AA1000000000000000000021 /* CosmeticState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticState.swift; sourceTree = "<group>"; };
+		AA1000000000000000000022 /* CustomizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomizeView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,6 +132,7 @@
 				AA100000000000000000001A /* iCloudConflictView.swift */,
 				AA1000000000000000000020 /* StreakManager.swift */,
 				AA1000000000000000000021 /* CosmeticState.swift */,
+				AA1000000000000000000022 /* CustomizeView.swift */,
 				AA100000000000000000001B /* ShellGame.entitlements */,
 				AA1000000000000000000006 /* Assets.xcassets */,
 				AB3000000000000000000001 /* ShellGameTests */,
@@ -278,6 +281,7 @@
 				AA2000000000000000000019 /* iCloudConflictView.swift in Sources */,
 				AA2000000000000000000020 /* StreakManager.swift in Sources */,
 				AA2000000000000000000021 /* CosmeticState.swift in Sources */,
+				AA2000000000000000000022 /* CustomizeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

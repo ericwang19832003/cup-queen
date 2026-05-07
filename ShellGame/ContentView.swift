@@ -822,7 +822,7 @@ private struct HostCharacterView: View {
 
 // MARK: - Preview Cup
 
-private struct PreviewCupView: View {
+struct PreviewCupView: View {
     let lit: Bool
     var theme: CupTheme = .classicRed
 
@@ -890,7 +890,7 @@ private struct PreviewCupView: View {
 
 // MARK: - Golden Ball
 
-private struct GoldenBallView: View {
+struct GoldenBallView: View {
     let diameter: CGFloat
     let glowPulse: Bool
 
