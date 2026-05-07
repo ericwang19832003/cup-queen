@@ -28,6 +28,9 @@ struct GameView: View {
     @State       private var showScoreboard: Bool = false
     @State       private var sessionEntryID: UUID? = nil
     @State       private var hasSubmittedSession: Bool = false
+    @State       private var milestoneToast: String? = nil
+    @State       private var showShare: Bool = false
+    @State       private var shareImage: UIImage? = nil
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -87,6 +90,32 @@ struct GameView: View {
                         removal:    .opacity
                     ))
             }
+
+            // ── Milestone toast ───────────────────────────────────────────
+            if let toast = milestoneToast {
+                VStack {
+                    Spacer()
+                    Text(toast)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20).padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(Color(red: 0.10, green: 0.05, blue: 0.25).opacity(0.95))
+                                .overlay(RoundedRectangle(cornerRadius: 14)
+                                    .strokeBorder(Color.yellow.opacity(0.50), lineWidth: 1.5))
+                        )
+                        .padding(.bottom, 40)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .onAppear {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 3_000_000_000)
+                        withAnimation { milestoneToast = nil }
+                    }
+                }
+            }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: gameState.phase)
         .navigationBarBackButtonHidden(true)
@@ -112,6 +141,17 @@ struct GameView: View {
                 SoundManager.shared.updateSurvivalCount(gameState.survivalCount)
             } else {
                 SoundManager.shared.updatePhase(newPhase)
+            }
+
+            // Streak: record round completion and surface any milestone toast
+            if newPhase == .result {
+                let newMilestones = StreakManager.shared.recordRound()
+                if let day = newMilestones.sorted().first,
+                   let reward = StreakManager.milestoneRewards[day] {
+                    withAnimation {
+                        milestoneToast = "🔥 Day \(day) streak!\n\(reward) unlocked"
+                    }
+                }
             }
 
             // Hint timer: start 2s countdown on .choosing; cancel on any other phase
@@ -189,6 +229,9 @@ struct GameView: View {
                     }
                 }
             )
+        }
+        .sheet(isPresented: $showShare) {
+            if let img = shareImage { ShareSheet(image: img) }
         }
     }
 
@@ -531,6 +574,17 @@ struct GameView: View {
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundColor(.white.opacity(0.55))
 
+                Button {
+                    shareSession()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Share")
+                    }
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(0.70))
+                }
+
                 // Remove Ads upsell — shown on loss, hidden once purchased
                 if !isWin && !AdManager.shared.adsRemoved {
                     VStack(spacing: 6) {
@@ -634,6 +688,20 @@ struct GameView: View {
             startRound()
         }
     }
+
+    @MainActor
+    private func shareSession() {
+        let stats = ShareStats(
+            level: gameState.level,
+            score: gameState.score,
+            survival: gameState.survivalCount,
+            streakCount: StreakManager.shared.streakCount,
+            playerName: UserDefaults.standard.string(forKey: "cq_player_name") ?? "",
+            cupTheme: CosmeticState.shared.activeCup
+        )
+        shareImage = ShareCardView.render(stats: stats)
+        showShare = shareImage != nil
+    }
 }
 
 // MARK: - Coordinator (SpriteKit → SwiftUI bridge)
@@ -670,4 +738,14 @@ private final class Coordinator: ShellGameSceneDelegate {
             self.gameState.playerTappedCup(cupIndex)
         }
     }
+}
+
+// MARK: - ShareSheet
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let image: UIImage
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [image], applicationActivities: nil)
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
