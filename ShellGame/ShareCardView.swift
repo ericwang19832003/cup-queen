@@ -105,7 +105,10 @@ struct ShareCardView: View {
     static func render(stats: ShareStats) -> UIImage? {
         let view = ShareCardView(stats: stats)
         let renderer = ImageRenderer(content: view)
-        renderer.scale = UIScreen.main.scale
+        let scale = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.screen.scale ?? UITraitCollection.current.displayScale
+        renderer.scale = scale
         return renderer.uiImage
     }
 }
