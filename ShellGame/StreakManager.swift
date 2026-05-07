@@ -45,7 +45,11 @@ final class StreakManager {
     // MARK: - Internal Testing API
 
     /// Reloads all state from UserDefaults. Call in test setUp() after wiping keys.
-    func reloadFromDefaults() { load() }
+    #if DEBUG
+    func reloadFromDefaults() {
+        load()
+    }
+    #endif
 
     // MARK: - Public API
 
@@ -101,7 +105,7 @@ final class StreakManager {
 
     /// Awards multiple shields (e.g., 3-pack IAP).
     func addShields(_ count: Int) {
-        shields = min(shields + count, Self.maxShields)
+        shields = max(0, min(shields + count, Self.maxShields))
         UserDefaults.standard.set(shields, forKey: K.shields)
     }
 
@@ -163,6 +167,7 @@ final class StreakManager {
     private func daysBetween(from: String, to: String) -> Int {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = .current
         guard let d1 = f.date(from: from), let d2 = f.date(from: to) else { return 99 }
         return Calendar.current.dateComponents([.day], from: d1, to: d2).day ?? 99
     }
