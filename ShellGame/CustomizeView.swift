@@ -5,7 +5,7 @@ import SwiftUI
 import StoreKit
 
 struct CustomizeView: View {
-    @ObservedObject private var cosmetics = CosmeticState.shared
+    @StateObject private var cosmetics = CosmeticState.shared
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTab = 0
     @State private var isPurchasing = false
@@ -73,7 +73,10 @@ struct CustomizeView: View {
                         .foregroundColor(Color(red: 1, green: 0.85, blue: 0.28))
                 }
             }
-            .alert("Purchase failed", isPresented: .constant(purchaseError != nil)) {
+            .alert("Purchase failed", isPresented: Binding(
+                get: { purchaseError != nil },
+                set: { if !$0 { purchaseError = nil } }
+            )) {
                 Button("OK") { purchaseError = nil }
             } message: {
                 Text(purchaseError ?? "")
@@ -81,16 +84,17 @@ struct CustomizeView: View {
         }
     }
 
+    @MainActor
     private func purchase(productID: String?) {
         guard let pid = productID else { return }
         isPurchasing = true
         Task {
+            defer { isPurchasing = false }
             do {
                 try await PurchaseManager.shared.purchaseCosmetic(productID: pid)
             } catch {
                 purchaseError = error.localizedDescription
             }
-            isPurchasing = false
         }
     }
 }
