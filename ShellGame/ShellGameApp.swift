@@ -23,9 +23,9 @@ struct ShellGameApp: App {
         Task { await PurchaseManager.shared.checkExistingEntitlements() }
         GameCenterManager.shared.authenticate()
         Task {
-            try? await UNUserNotificationCenter.current()
-                .requestAuthorization(options: [.alert, .sound, .badge])
-            if StreakManager.shared.streakCount > 0 {
+            let granted = (try? await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            if granted && StreakManager.shared.streakCount > 0 {
                 StreakManager.shared.scheduleReminder()
             }
         }
