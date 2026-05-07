@@ -613,3 +613,113 @@ final class StreakManagerTests: XCTestCase {
         XCTAssertTrue(days.contains(365))
     }
 }
+
+// MARK: - CosmeticStateNaturePackTests
+
+final class CosmeticStateNaturePackTests: XCTestCase {
+
+    private let naturePack = ["oceanTeal", "emeraldForest", "roseGold",
+                              "marbleWhite", "sunsetOrange", "arcticIce"]
+    private let extraKeys  = ["cq_daily_completed", "cq_gauntlet_completed",
+                              "cq_total_rounds", "cq_has_unseen_unlock",
+                              "cq_bestLevel", "cq_competition_wins", "cq_ps_count"]
+
+    override func setUp() {
+        super.setUp()
+        for k in extraKeys { UserDefaults.standard.removeObject(forKey: k) }
+        if var cups = UserDefaults.standard.array(forKey: "cq_cos_unlocked_cups") as? [String] {
+            cups.removeAll { naturePack.contains($0) }
+            UserDefaults.standard.set(cups, forKey: "cq_cos_unlocked_cups")
+        }
+        CosmeticState.shared.reloadFromDefaults()
+    }
+
+    override func tearDown() {
+        for k in extraKeys { UserDefaults.standard.removeObject(forKey: k) }
+        CosmeticState.shared.reloadFromDefaults()
+        super.tearDown()
+    }
+
+    func test_recordRound_incrementsTotalRounds() {
+        CosmeticState.shared.recordRound(mode: .solo)
+        CosmeticState.shared.recordRound(mode: .solo)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "cq_total_rounds"), 2)
+    }
+
+    func test_recordRound_daily_incrementsDailyCompleted() {
+        CosmeticState.shared.recordRound(mode: .daily)
+        CosmeticState.shared.recordRound(mode: .daily)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "cq_daily_completed"), 2)
+    }
+
+    func test_recordRound_gauntlet_incrementsGauntletCompleted() {
+        CosmeticState.shared.recordRound(mode: .gauntlet)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "cq_gauntlet_completed"), 1)
+    }
+
+    func test_marbleWhite_unlocksAt50TotalRounds() {
+        for _ in 0..<49 { CosmeticState.shared.recordRound(mode: .solo) }
+        XCTAssertFalse(CosmeticState.shared.unlockedCups.contains("marbleWhite"))
+        let name = CosmeticState.shared.recordRound(mode: .solo)
+        XCTAssertTrue(CosmeticState.shared.unlockedCups.contains("marbleWhite"))
+        XCTAssertEqual(name, "🤍 Marble White")
+        XCTAssertTrue(CosmeticState.shared.hasUnseenUnlock)
+    }
+
+    func test_oceanTeal_unlocksAt5DailyChallenges() {
+        for _ in 0..<4 { CosmeticState.shared.recordRound(mode: .daily) }
+        XCTAssertFalse(CosmeticState.shared.unlockedCups.contains("oceanTeal"))
+        CosmeticState.shared.recordRound(mode: .daily)
+        XCTAssertTrue(CosmeticState.shared.unlockedCups.contains("oceanTeal"))
+    }
+
+    func test_sunsetOrange_unlocksAt3Gauntlets() {
+        for _ in 0..<2 { CosmeticState.shared.recordRound(mode: .gauntlet) }
+        XCTAssertFalse(CosmeticState.shared.unlockedCups.contains("sunsetOrange"))
+        CosmeticState.shared.recordRound(mode: .gauntlet)
+        XCTAssertTrue(CosmeticState.shared.unlockedCups.contains("sunsetOrange"))
+    }
+
+    func test_emeraldForest_unlocksWhenLevel10Reached() {
+        UserDefaults.standard.set(10, forKey: "cq_bestLevel")
+        CosmeticState.shared.recordRound(mode: .solo)
+        XCTAssertTrue(CosmeticState.shared.unlockedCups.contains("emeraldForest"))
+    }
+
+    func test_roseGold_unlocksWhen25DuelWins() {
+        UserDefaults.standard.set(25, forKey: "cq_competition_wins")
+        CosmeticState.shared.recordRound(mode: .duel)
+        XCTAssertTrue(CosmeticState.shared.unlockedCups.contains("roseGold"))
+    }
+
+    func test_arcticIce_unlocksAt14DayStreak() {
+        UserDefaults.standard.set(14, forKey: "cq_ps_count")
+        CosmeticState.shared.recordRound(mode: .solo)
+        XCTAssertTrue(CosmeticState.shared.unlockedCups.contains("arcticIce"))
+    }
+
+    func test_clearUnseenUnlock_clearsFlag() {
+        UserDefaults.standard.set(14, forKey: "cq_ps_count")
+        CosmeticState.shared.recordRound(mode: .solo)
+        XCTAssertTrue(CosmeticState.shared.hasUnseenUnlock)
+        CosmeticState.shared.clearUnseenUnlock()
+        XCTAssertFalse(CosmeticState.shared.hasUnseenUnlock)
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: "cq_has_unseen_unlock"))
+    }
+
+    func test_progress_oceanTeal_returnsCorrectTuple() {
+        UserDefaults.standard.set(3, forKey: "cq_daily_completed")
+        CosmeticState.shared.reloadFromDefaults()
+        let p = CosmeticState.shared.progress(for: "oceanTeal")
+        XCTAssertEqual(p?.current, 3)
+        XCTAssertEqual(p?.required, 5)
+        XCTAssertEqual(p?.label, "Daily Challenges")
+    }
+
+    func test_retroactiveUnlock_onLoad_silently() {
+        UserDefaults.standard.set(10, forKey: "cq_bestLevel")
+        CosmeticState.shared.reloadFromDefaults()
+        XCTAssertTrue(CosmeticState.shared.unlockedCups.contains("emeraldForest"))
+        XCTAssertFalse(CosmeticState.shared.hasUnseenUnlock)
+    }
+}

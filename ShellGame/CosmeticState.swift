@@ -58,7 +58,53 @@ struct CupTheme {
         litBot:   Color(red: 0.90, green: 0.97, blue: 1.00)
     )
 
-    static let all: [CupTheme] = [.classicRed, .gold, .midnight, .crimsonQueen, .diamond, .diamondAnimated]
+    static let oceanTeal = CupTheme(
+        id: "oceanTeal", name: "🌊 Ocean Teal",
+        unlitTop: Color(red: 0.02, green: 0.22, blue: 0.30),
+        unlitBot: Color(red: 0.04, green: 0.35, blue: 0.48),
+        litTop:   Color(red: 0.06, green: 0.52, blue: 0.68),
+        litBot:   Color(red: 0.12, green: 0.72, blue: 0.88)
+    )
+    static let emeraldForest = CupTheme(
+        id: "emeraldForest", name: "🌿 Emerald Forest",
+        unlitTop: Color(red: 0.02, green: 0.22, blue: 0.08),
+        unlitBot: Color(red: 0.04, green: 0.38, blue: 0.14),
+        litTop:   Color(red: 0.06, green: 0.55, blue: 0.20),
+        litBot:   Color(red: 0.15, green: 0.75, blue: 0.32)
+    )
+    static let roseGold = CupTheme(
+        id: "roseGold", name: "🌸 Rose Gold",
+        unlitTop: Color(red: 0.45, green: 0.22, blue: 0.22),
+        unlitBot: Color(red: 0.62, green: 0.38, blue: 0.32),
+        litTop:   Color(red: 0.78, green: 0.55, blue: 0.45),
+        litBot:   Color(red: 0.92, green: 0.72, blue: 0.58)
+    )
+    static let marbleWhite = CupTheme(
+        id: "marbleWhite", name: "🤍 Marble White",
+        unlitTop: Color(red: 0.55, green: 0.52, blue: 0.50),
+        unlitBot: Color(red: 0.72, green: 0.70, blue: 0.68),
+        litTop:   Color(red: 0.85, green: 0.83, blue: 0.82),
+        litBot:   Color(red: 0.96, green: 0.95, blue: 0.93)
+    )
+    static let sunsetOrange = CupTheme(
+        id: "sunsetOrange", name: "🌅 Sunset Orange",
+        unlitTop: Color(red: 0.45, green: 0.18, blue: 0.02),
+        unlitBot: Color(red: 0.68, green: 0.30, blue: 0.04),
+        litTop:   Color(red: 0.88, green: 0.45, blue: 0.08),
+        litBot:   Color(red: 1.00, green: 0.65, blue: 0.15)
+    )
+    static let arcticIce = CupTheme(
+        id: "arcticIce", name: "🧊 Arctic Ice",
+        unlitTop: Color(red: 0.20, green: 0.30, blue: 0.42),
+        unlitBot: Color(red: 0.35, green: 0.50, blue: 0.65),
+        litTop:   Color(red: 0.55, green: 0.72, blue: 0.88),
+        litBot:   Color(red: 0.80, green: 0.92, blue: 1.00)
+    )
+
+    static let all: [CupTheme] = [
+        .classicRed, .gold, .midnight, .crimsonQueen, .diamond, .diamondAnimated,
+        .oceanTeal, .emeraldForest, .roseGold, .marbleWhite, .sunsetOrange, .arcticIce
+    ]
 }
 
 struct BallTheme {
@@ -135,6 +181,7 @@ final class CosmeticState: ObservableObject {
     @Published private(set) var unlockedCups:   Set<String> = ["classicRed"]
     @Published private(set) var unlockedBalls:  Set<String> = ["golden"]
     @Published private(set) var unlockedTables: Set<String> = ["greenFelt"]
+    @Published private(set) var hasUnseenUnlock: Bool = false
 
     private enum K {
         static let activeCup    = "cq_cos_cup"
@@ -143,6 +190,10 @@ final class CosmeticState: ObservableObject {
         static let unlockedCups    = "cq_cos_unlocked_cups"
         static let unlockedBalls   = "cq_cos_unlocked_balls"
         static let unlockedTables  = "cq_cos_unlocked_tables"
+        static let dailyCompleted    = "cq_daily_completed"
+        static let gauntletCompleted = "cq_gauntlet_completed"
+        static let totalRounds       = "cq_total_rounds"
+        static let hasUnseenUnlock   = "cq_has_unseen_unlock"
     }
 
     // Which cup/ball/table IDs require IAP (vs. milestone-only or free).
@@ -166,6 +217,9 @@ final class CosmeticState: ObservableObject {
 
     // Earnable via duel wins (not IAP, not milestone).
     static let earnableBalls: Set<String> = ["flame"]
+
+    // Game mode enum used by recordRound.
+    enum GameMode { case solo, daily, gauntlet, duel }
 
     private init() { load() }
 
@@ -213,6 +267,76 @@ final class CosmeticState: ObservableObject {
         unlockTable(id: "neonPurple")
     }
 
+    // MARK: - Nature Pack
+
+    @discardableResult
+    func recordRound(mode: GameMode) -> String? {
+        let ud = UserDefaults.standard
+        ud.set(ud.integer(forKey: K.totalRounds) + 1, forKey: K.totalRounds)
+        switch mode {
+        case .daily:
+            ud.set(ud.integer(forKey: K.dailyCompleted) + 1, forKey: K.dailyCompleted)
+        case .gauntlet:
+            ud.set(ud.integer(forKey: K.gauntletCompleted) + 1, forKey: K.gauntletCompleted)
+        case .solo, .duel:
+            break
+        }
+        return checkNaturePackUnlocks(announce: true)
+    }
+
+    func progress(for cupID: String) -> (current: Int, required: Int, label: String)? {
+        guard !unlockedCups.contains(cupID) else { return nil }
+        let ud = UserDefaults.standard
+        switch cupID {
+        case "oceanTeal":
+            return (min(ud.integer(forKey: K.dailyCompleted), 5), 5, "Daily Challenges")
+        case "emeraldForest":
+            return (min(ud.integer(forKey: "cq_bestLevel"), 10), 10, "Solo Level")
+        case "roseGold":
+            return (min(ud.integer(forKey: "cq_competition_wins"), 25), 25, "Duel Wins")
+        case "marbleWhite":
+            return (min(ud.integer(forKey: K.totalRounds), 50), 50, "Rounds Played")
+        case "sunsetOrange":
+            return (min(ud.integer(forKey: K.gauntletCompleted), 3), 3, "Gauntlets Completed")
+        case "arcticIce":
+            return (min(ud.integer(forKey: "cq_ps_count"), 14), 14, "Day Streak")
+        default:
+            return nil
+        }
+    }
+
+    func clearUnseenUnlock() {
+        hasUnseenUnlock = false
+        UserDefaults.standard.set(false, forKey: K.hasUnseenUnlock)
+    }
+
+    @discardableResult
+    private func checkNaturePackUnlocks(announce: Bool) -> String? {
+        let ud = UserDefaults.standard
+        let thresholds: [(String, String, Bool)] = [
+            ("oceanTeal",     "🌊 Ocean Teal",     ud.integer(forKey: K.dailyCompleted) >= 5),
+            ("emeraldForest", "🌿 Emerald Forest",  ud.integer(forKey: "cq_bestLevel") >= 10),
+            ("roseGold",      "🌸 Rose Gold",       ud.integer(forKey: "cq_competition_wins") >= 25),
+            ("marbleWhite",   "🤍 Marble White",    ud.integer(forKey: K.totalRounds) >= 50),
+            ("sunsetOrange",  "🌅 Sunset Orange",   ud.integer(forKey: K.gauntletCompleted) >= 3),
+            ("arcticIce",     "🧊 Arctic Ice",      ud.integer(forKey: "cq_ps_count") >= 14),
+        ]
+        var firstName: String? = nil
+        for (id, name, met) in thresholds where met && !unlockedCups.contains(id) {
+            unlockCup(id: id)
+            if announce && firstName == nil { firstName = name }
+        }
+        if announce && firstName != nil {
+            hasUnseenUnlock = true
+            UserDefaults.standard.set(true, forKey: K.hasUnseenUnlock)
+        }
+        return firstName
+    }
+
+    #if DEBUG
+    func reloadFromDefaults() { load() }
+    #endif
+
     // MARK: - Persistence
 
     private func load() {
@@ -231,5 +355,8 @@ final class CosmeticState: ObservableObject {
         if !unlockedCups.contains(activeCup.id)     { activeCup   = .classicRed }
         if !unlockedBalls.contains(activeBall.id)   { activeBall  = .golden }
         if !unlockedTables.contains(activeTable.id) { activeTable = .greenFelt }
+
+        hasUnseenUnlock = ud.bool(forKey: K.hasUnseenUnlock)
+        checkNaturePackUnlocks(announce: false)
     }
 }
