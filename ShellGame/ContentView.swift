@@ -40,6 +40,7 @@ struct ContentView: View {
     @State private var savedPrestige: Int  = 0
     @State private var modesUnlocked: Bool = false
     @State private var savedCompetitionWins: Int = 0
+    @State private var savedStreakCount: Int = 0
     @State private var showCustomize: Bool = false
 
     var body: some View {
@@ -64,7 +65,7 @@ struct ContentView: View {
                             prestigeCount: savedPrestige,
                             playerName: playerName,
                             bestSurvival: savedBestSurvival,
-                            streakCount: StreakManager.shared.streakCount,
+                            streakCount: savedStreakCount,
                             rankBadge: rankBadge
                         )
                         Spacer().frame(height: 12)
@@ -166,6 +167,7 @@ struct ContentView: View {
                 modesUnlocked     = savedBestLevel >= 7
                 playerName        = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
                 savedCompetitionWins = UserDefaults.standard.integer(forKey: "cq_competition_wins")
+                savedStreakCount = StreakManager.shared.streakCount
                 SoundManager.shared.startHomeAmbient()   // Feature 1: home screen jazz
                 checkiCloudConflict()
             }
@@ -209,6 +211,8 @@ struct ContentView: View {
         savedPrestige     = UserDefaults.standard.integer(forKey: "cq_prestige")
         modesUnlocked     = savedBestLevel >= 7
         playerName        = UserDefaults.standard.string(forKey: "cq_player_name") ?? ""
+        savedCompetitionWins = UserDefaults.standard.integer(forKey: "cq_competition_wins")
+        savedStreakCount  = StreakManager.shared.streakCount
     }
 
     private func checkiCloudConflict() {
