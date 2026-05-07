@@ -53,6 +53,7 @@
 		AA2000000000000000000021 /* CosmeticState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000021 /* CosmeticState.swift */; };
 		AA2000000000000000000022 /* CustomizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000022 /* CustomizeView.swift */; };
 		AA2000000000000000000023 /* ShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000023 /* ShareCardView.swift */; };
+		AA2000000000000000000024 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = AA9000000000000000000002 /* GoogleMobileAds */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -95,6 +96,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA2000000000000000000007 /* SpriteKit.framework in Frameworks */,
+				AA2000000000000000000024 /* GoogleMobileAds in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -186,6 +188,9 @@
 			dependencies = (
 			);
 			name = ShellGame;
+			packageProductDependencies = (
+				AA9000000000000000000002 /* GoogleMobileAds */,
+			);
 			productName = ShellGame;
 			productReference = AA1000000000000000000007 /* ShellGame.app */;
 			productType = "com.apple.product-type.application";
@@ -236,6 +241,9 @@
 			);
 			mainGroup = AA3000000000000000000001;
 			productRefGroup = AA3000000000000000000002 /* Products */;
+			packageReferences = (
+				AA9000000000000000000001 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -298,6 +306,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA9000000000000000000001 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA9000000000000000000002 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA9000000000000000000001 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AA7000000000000000000001 /* Debug */ = {
@@ -425,6 +452,7 @@
 				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 5LQWKL72G9;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_GADApplicationIdentifier = "ca-app-pub-3231546664210357~4010518492";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "We use this to show you relevant ads and keep the game free.";
@@ -453,6 +481,7 @@
 				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 5LQWKL72G9;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_GADApplicationIdentifier = "ca-app-pub-3231546664210357~4010518492";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "We use this to show you relevant ads and keep the game free.";

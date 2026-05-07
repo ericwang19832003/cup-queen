@@ -19,7 +19,7 @@ struct ShellGameApp: App {
         // TODO: ANALYTICS — FirebaseApp.configure()
         // TODO: SOUNDS    — SoundManager.shared.configure()
         // TODO: SKINS     — SkinManager.shared.loadSavedSkin()
-        // TODO: ADMOB     — AdManager.shared.configure()  ← uncomment after adding SDK
+        AdManager.shared.configure()
         Task { await PurchaseManager.shared.checkExistingEntitlements() }
         GameCenterManager.shared.authenticate()
         Task {
@@ -51,11 +51,12 @@ struct ShellGameApp: App {
 //      NSUserTrackingUsageDescription = "We use this to show you relevant ads."
 
 import AppTrackingTransparency
+import GoogleMobileAds
 import UIKit
 
 private enum AdUnitID {
-    static let interstitial = "ca-app-pub-3940256099942544/4411468910"  // Google test ID — replace before shipping
-    static let rewarded     = "ca-app-pub-3940256099942544/1712485313"  // Google test ID — replace before shipping
+    static let interstitial = "ca-app-pub-3231546664210357/4171512040"
+    static let rewarded     = "ca-app-pub-3231546664210357/2792805593"
 }
 
 final class AdManager {
@@ -67,14 +68,15 @@ final class AdManager {
 
     private(set) var adsRemoved: Bool = false
 
-    // TODO: ADMOB — private var interstitial: GADInterstitialAd?
-    // TODO: ADMOB — private var rewardedAd: GADRewardedAd?
+    private var interstitial: GADInterstitialAd?
+    private var rewardedAd: GADRewardedAd?
 
     // MARK: - Setup
 
     func configure() {
-        // TODO: ADMOB — GADMobileAds.sharedInstance().start(completionHandler: nil)
-        // TODO: ADMOB — GADMobileAds.sharedInstance().requestConfiguration.maxAdContentRating = .general
+        GADMobileAds.sharedInstance().start(completionHandler: nil)
+        GADMobileAds.sharedInstance().requestConfiguration.maxAdContentRating = .general
+        preloadRewardedAd()
     }
 
     // MARK: - Interstitial (3rd cumulative loss)
@@ -95,15 +97,12 @@ final class AdManager {
     private func loadAndShowInterstitial() async {
         guard !adsRemoved, let rootVC = rootViewController() else { return }
 
-        // TODO: ADMOB — replace with:
-        // do {
-        //     interstitial = try await GADInterstitialAd.load(
-        //         withAdUnitID: AdUnitID.interstitial, request: GADRequest()
-        //     )
-        //     interstitial?.present(fromRootViewController: rootVC)
-        // } catch { print("Interstitial load failed: \(error)") }
-
-        print("AdManager [STUB]: interstitial would show here — rootVC: \(rootVC)")
+        do {
+            interstitial = try await GADInterstitialAd.load(
+                withAdUnitID: AdUnitID.interstitial, request: GADRequest()
+            )
+            interstitial?.present(fromRootViewController: rootVC)
+        } catch { print("AdManager: interstitial load failed — \(error)") }
     }
 
     // MARK: - Rewarded (hint feature)
@@ -118,11 +117,10 @@ final class AdManager {
 
     func preloadRewardedAd() {
         guard !adsRemoved else { return }
-        // TODO: ADMOB —
-        // GADRewardedAd.load(withAdUnitID: AdUnitID.rewarded, request: GADRequest()) { [weak self] ad, error in
-        //     if let error { print("Rewarded load failed: \(error)"); return }
-        //     self?.rewardedAd = ad
-        // }
+        GADRewardedAd.load(withAdUnitID: AdUnitID.rewarded, request: GADRequest()) { [weak self] ad, error in
+            if let error { print("AdManager: rewarded load failed — \(error)"); return }
+            self?.rewardedAd = ad
+        }
     }
 
     @MainActor
@@ -130,12 +128,13 @@ final class AdManager {
         if adsRemoved { onRewarded(); return }   // IAP users get hint free
         guard let rootVC = rootViewController() else { return }
 
-        // TODO: ADMOB — replace with:
-        // guard let rewardedAd else { return }
-        // rewardedAd.present(fromRootViewController: rootVC, userDidEarnRewardHandler: onRewarded)
-
-        print("AdManager [STUB]: rewarded ad would show here — rootVC: \(rootVC)")
-        onRewarded()   // grant hint immediately while SDK is not yet integrated
+        guard let rewardedAd else {
+            print("AdManager: no rewarded ad loaded")
+            return
+        }
+        rewardedAd.present(fromRootViewController: rootVC, userDidEarnRewardHandler: onRewarded)
+        self.rewardedAd = nil
+        preloadRewardedAd()  // pre-load next ad immediately after presentation
     }
 
     // MARK: - IAP
