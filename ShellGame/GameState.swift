@@ -183,6 +183,7 @@ final class GameState: ObservableObject {
                 }
                 hostMessage = HostMessages.lose.randomElement()!
             }
+            AnalyticsManager.log(.roundResult(mode: "gauntlet", level: gauntletLevel, correct: correct))
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
                 guard self?.phase == .revealing else { return }
                 self?.phase = .result
@@ -254,13 +255,13 @@ final class GameState: ObservableObject {
 
         iCloudSyncManager.shared.push()
 
+        AnalyticsManager.log(.roundResult(mode: mode.submissionKey, level: level, correct: correct))
+
         // Advance to result after reveal animation finishes (~1.8 s)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
             guard self?.phase == .revealing else { return }
             self?.phase = .result
         }
-
-        // TODO: ANALYTICS — Analytics.log(.roundComplete, correct: correct, level: level)
     }
 
     /// Reset to idle so GameView can restart.

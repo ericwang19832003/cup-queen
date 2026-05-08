@@ -54,6 +54,7 @@
 		AA2000000000000000000022 /* CustomizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000022 /* CustomizeView.swift */; };
 		AA2000000000000000000023 /* ShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000023 /* ShareCardView.swift */; };
 		AA2000000000000000000024 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = AA9000000000000000000002 /* GoogleMobileAds */; };
+		AA2000000000000000000025 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000024 /* AnalyticsManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -88,6 +89,7 @@
 		AA1000000000000000000021 /* CosmeticState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticState.swift; sourceTree = "<group>"; };
 		AA1000000000000000000022 /* CustomizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomizeView.swift; sourceTree = "<group>"; };
 		AA1000000000000000000023 /* ShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardView.swift; sourceTree = "<group>"; };
+		AA1000000000000000000024 /* AnalyticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,6 +140,7 @@
 				AA1000000000000000000021 /* CosmeticState.swift */,
 				AA1000000000000000000022 /* CustomizeView.swift */,
 				AA1000000000000000000023 /* ShareCardView.swift */,
+				AA1000000000000000000024 /* AnalyticsManager.swift */,
 				AA100000000000000000001B /* ShellGame.entitlements */,
 				AA1000000000000000000006 /* Assets.xcassets */,
 				AB3000000000000000000001 /* ShellGameTests */,
@@ -294,6 +297,7 @@
 				AA2000000000000000000021 /* CosmeticState.swift in Sources */,
 				AA2000000000000000000022 /* CustomizeView.swift in Sources */,
 				AA2000000000000000000023 /* ShareCardView.swift in Sources */,
+				AA2000000000000000000025 /* AnalyticsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

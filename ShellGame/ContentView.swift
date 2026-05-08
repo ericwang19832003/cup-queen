@@ -500,6 +500,8 @@ struct ContentView: View {
                 radius: ctaPulse ? 28 : 14, y: 5
             )
         }
+        .accessibilityLabel("Play Now")
+        .accessibilityHint("Enter your name and start a new game")
     }
 
     // MARK: - Returning / New Player Computed Properties
@@ -591,6 +593,8 @@ struct ContentView: View {
                 radius: ctaPulse ? 28 : 14, y: 5
             )
         }
+        .accessibilityLabel("Continue at Level \(savedBestLevel)")
+        .accessibilityHint("Resume your saved game")
     }
 
     private var freshStartLink: some View {

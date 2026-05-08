@@ -102,6 +102,7 @@ final class AdManager {
                 withAdUnitID: AdUnitID.interstitial, request: GADRequest()
             )
             interstitial?.present(fromRootViewController: rootVC)
+            AnalyticsManager.log(.adShow(type: "interstitial"))
         } catch { print("AdManager: interstitial load failed — \(error)") }
     }
 
@@ -133,6 +134,7 @@ final class AdManager {
             return
         }
         rewardedAd.present(fromRootViewController: rootVC, userDidEarnRewardHandler: onRewarded)
+        AnalyticsManager.log(.adShow(type: "rewarded"))
         self.rewardedAd = nil
         preloadRewardedAd()  // pre-load next ad immediately after presentation
     }

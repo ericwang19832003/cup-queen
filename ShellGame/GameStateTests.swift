@@ -448,7 +448,8 @@ private func simulateWin(_ state: GameState) {
 
 private func simulateLoss(_ state: GameState) {
     state.advanceToChoosing()
-    let wrongCup = (state.correctCupIndex + 1) % 3
+    let cupCount = LevelConfig.config(for: state.level).cupCount
+    let wrongCup = (state.correctCupIndex + 1) % cupCount
     state.playerTappedCup(wrongCup)
 }
 

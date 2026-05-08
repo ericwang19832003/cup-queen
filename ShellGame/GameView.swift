@@ -51,6 +51,9 @@ struct GameView: View {
                         SpriteView(scene: scene, options: [.allowsTransparency])
                             .frame(width: geo.size.width, height: 310)
                             .onAppear { resizeScene(to: geo.size) }
+                            .accessibilityLabel("Shell game play area")
+                            .accessibilityHint(gameState.phase == .choosing ? "Tap the cup hiding the ball" : "")
+                            .accessibilityAddTraits(.allowsDirectInteraction)
                     }
                 }
                 .frame(height: 310)
@@ -593,6 +596,7 @@ struct GameView: View {
                 if !isWin && !AdManager.shared.adsRemoved {
                     VStack(spacing: 6) {
                         Button {
+                            AnalyticsManager.log(.purchaseTapped(productID: "com.shellgame.magiccup.removeads"))
                             Task { await PurchaseManager.shared.purchaseRemoveAds() }
                         } label: {
                             Text("Remove Ads — $1.99")
@@ -636,6 +640,7 @@ struct GameView: View {
     // MARK: - Setup & Coordination
 
     private func setupScene() {
+        AnalyticsManager.log(.sessionStart(mode: "solo"))
         let s = GameScene(size: CGSize(width: 390, height: 310))
         s.level = gameState.level   // must be set before didMove(to:) so cups are built for the right level
         let coord = Coordinator(gameState: gameState, scene: s)
