@@ -54,6 +54,26 @@ struct GameView: View {
                             .accessibilityLabel("Shell game play area")
                             .accessibilityHint(gameState.phase == .choosing ? "Tap the cup hiding the ball" : "")
                             .accessibilityAddTraits(.allowsDirectInteraction)
+
+                        // VoiceOver per-cup accessibility overlay — invisible to sighted users,
+                        // only active during the choosing phase.
+                        if gameState.phase == .choosing {
+                            let config = LevelConfig.config(for: gameState.level)
+                            let halfW  = geo.size.width / 2
+                            // Scene cupY = -10; flip to SwiftUI coords: 310/2 - (-10) = 165
+                            let viewY: CGFloat = 165
+                            ForEach(Array(config.slotXPositions.enumerated()), id: \.offset) { i, sceneX in
+                                Button {
+                                    scene.accessibilitySelectCup(i)
+                                } label: {
+                                    Color.clear
+                                        .frame(width: config.hitDX * 2, height: config.cupSize.height)
+                                }
+                                .position(x: sceneX + halfW, y: viewY)
+                                .accessibilityLabel("Cup \(i + 1) of \(config.cupCount)")
+                                .accessibilityHint("Double-tap to choose this cup")
+                            }
+                        }
                     }
                 }
                 .frame(height: 310)

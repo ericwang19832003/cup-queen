@@ -118,7 +118,7 @@ struct ContentView: View {
             .overlay(alignment: .topLeading) {
                 Button { showSettings = true } label: {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 16))
+                        .font(.system(.callout))
                         .foregroundColor(.white.opacity(0.35))
                         .padding(.top, 62)
                         .padding(.leading, 22)
@@ -260,18 +260,18 @@ struct ContentView: View {
             if let top = topScore {
                 HStack(spacing: 6) {
                     Image(systemName: "trophy.fill")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.caption2.weight(.bold))
                         .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
                     Text("Top score:")
-                        .font(.system(size: 11, design: .rounded))
+                        .font(.system(.caption2, design: .rounded))
                         .foregroundColor(.white.opacity(0.45))
                     Text(top.name)
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                         .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
                     Text("·")
                         .foregroundColor(.white.opacity(0.30))
                     Text("\(top.score) pts")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                         .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
                 }
                 .padding(.horizontal, 16)
@@ -350,7 +350,7 @@ struct ContentView: View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 5) {
                 Text("CUP QUEEN")
-                .font(.system(size: 46, weight: .heavy, design: .rounded))
+                .font(.system(.largeTitle, design: .rounded).weight(.heavy))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [
@@ -364,7 +364,7 @@ struct ContentView: View {
                 .shadow(color: Color(red: 1, green: 0.7, blue: 0).opacity(0.9), radius: 20, y: 3)
 
                 Text("FIND THE BALL")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(.caption, design: .rounded).weight(.bold))
                     .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.90))
                     .tracking(7)
             }
@@ -376,7 +376,7 @@ struct ContentView: View {
                     showGameCenter = true
                 } label: {
                     Image(systemName: "trophy.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.title3.weight(.semibold))
                         .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
                         .shadow(color: Color.yellow.opacity(0.55), radius: 6)
                 }
@@ -390,10 +390,10 @@ struct ContentView: View {
     private var challengeBadge: some View {
         HStack(spacing: 7) {
             Image(systemName: "flame.fill")
-                .font(.system(size: 12, weight: .bold))
+                .font(.caption.weight(.bold))
                 .foregroundColor(Color(red: 1, green: 0.45, blue: 0.18))
             Text("Only 1% of players beat Level 7")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(.footnote, design: .rounded).weight(.bold))
                 .foregroundStyle(
                     LinearGradient(
                         colors: [Color(red: 1, green: 0.62, blue: 0.22), Color(red: 1, green: 0.36, blue: 0.15)],
@@ -401,7 +401,7 @@ struct ContentView: View {
                     )
                 )
             Image(systemName: "flame.fill")
-                .font(.system(size: 12, weight: .bold))
+                .font(.caption.weight(.bold))
                 .foregroundColor(Color(red: 1, green: 0.45, blue: 0.18))
         }
         .padding(.horizontal, 16)
@@ -445,7 +445,7 @@ struct ContentView: View {
     private func howToStep(icon: String, label: String) -> some View {
         VStack(spacing: 7) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundColor(.black)
                 .frame(width: 30, height: 30)
                 .background(
@@ -454,7 +454,7 @@ struct ContentView: View {
                 )
                 .clipShape(Circle())
             Text(label)
-                .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                .font(.system(.caption, design: .rounded).weight(.semibold))
                 .foregroundColor(.white.opacity(0.80))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -477,9 +477,9 @@ struct ContentView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "play.fill")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.body.weight(.bold))
                 Text("Play Now")
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .font(.system(.title3, design: .rounded).weight(.heavy))
             }
             .foregroundColor(.black)
             .frame(maxWidth: .infinity)
@@ -570,9 +570,9 @@ struct ContentView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "play.fill")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.body.weight(.bold))
                 Text("Continue — Level \(savedBestLevel)")
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .font(.system(.title3, design: .rounded).weight(.heavy))
             }
             .foregroundColor(.black)
             .frame(maxWidth: .infinity)
@@ -603,7 +603,7 @@ struct ContentView: View {
             showNameEntry = true
         } label: {
             Text("Fresh Start")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(.footnote, design: .rounded).weight(.semibold))
                 .foregroundColor(.white.opacity(0.40))
                 .underline()
         }
@@ -617,9 +617,9 @@ struct ContentView: View {
             Button { showLeaderboard = true } label: {
                 VStack(spacing: 5) {
                     Image(systemName: "trophy.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.callout.weight(.semibold))
                     Text("Leaderboard")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                 }
                 .foregroundColor(Color(red: 0.30, green: 0.75, blue: 1.00))
                 .frame(maxWidth: .infinity)
@@ -639,9 +639,9 @@ struct ContentView: View {
             } label: {
                 VStack(spacing: 5) {
                     Image(systemName: "swords")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.callout.weight(.semibold))
                     Text("Duel")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                 }
                 .foregroundColor(Color(red: 1, green: 0.88, blue: 0.30))
                 .frame(maxWidth: .infinity)
@@ -658,9 +658,9 @@ struct ContentView: View {
             Button { showCustomize = true } label: {
                 VStack(spacing: 5) {
                     Image(systemName: "paintbrush.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.callout.weight(.semibold))
                     Text("Style")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                 }
                 .foregroundColor(Color(red: 1, green: 0.60, blue: 0.80))
                 .frame(maxWidth: .infinity)
@@ -685,9 +685,9 @@ struct ContentView: View {
             Button { if modesUnlocked { showModes = true } } label: {
                 VStack(spacing: 5) {
                     Image(systemName: modesUnlocked ? "star.circle.fill" : "lock.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.callout.weight(.semibold))
                     Text("Modes")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.bold))
                 }
                 .foregroundColor(modesUnlocked
                     ? Color(red: 0.78, green: 0.58, blue: 1.00)
@@ -756,7 +756,7 @@ private struct SettingsSheet: View {
                     Spacer()
                     Button { dismiss() } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
+                            .font(.system(.title2))
                             .foregroundColor(.white.opacity(0.35))
                     }
                 }
@@ -764,7 +764,7 @@ private struct SettingsSheet: View {
                 .padding(.top, 20)
 
                 Text("Settings")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.system(.title2, design: .rounded).weight(.bold))
                     .foregroundColor(.white)
 
                 VStack(spacing: 0) {
@@ -775,7 +775,7 @@ private struct SettingsSheet: View {
                             Image(systemName: "arrow.counterclockwise")
                                 .foregroundColor(.red.opacity(0.80))
                             Text("Reset Progress")
-                                .font(.system(size: 16, design: .rounded))
+                                .font(.system(.callout, design: .rounded))
                                 .foregroundColor(.red.opacity(0.80))
                             Spacer()
                         }

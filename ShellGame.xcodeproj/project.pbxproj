@@ -55,6 +55,7 @@
 		AA2000000000000000000023 /* ShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000023 /* ShareCardView.swift */; };
 		AA2000000000000000000024 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = AA9000000000000000000002 /* GoogleMobileAds */; };
 		AA2000000000000000000025 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000024 /* AnalyticsManager.swift */; };
+		AA2000000000000000000026 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000025 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,6 +91,7 @@
 		AA1000000000000000000022 /* CustomizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomizeView.swift; sourceTree = "<group>"; };
 		AA1000000000000000000023 /* ShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardView.swift; sourceTree = "<group>"; };
 		AA1000000000000000000024 /* AnalyticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManager.swift; sourceTree = "<group>"; };
+		AA1000000000000000000025 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -141,6 +143,7 @@
 				AA1000000000000000000022 /* CustomizeView.swift */,
 				AA1000000000000000000023 /* ShareCardView.swift */,
 				AA1000000000000000000024 /* AnalyticsManager.swift */,
+				AA1000000000000000000025 /* PrivacyInfo.xcprivacy */,
 				AA100000000000000000001B /* ShellGame.entitlements */,
 				AA1000000000000000000006 /* Assets.xcassets */,
 				AB3000000000000000000001 /* ShellGameTests */,
@@ -262,6 +265,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA2000000000000000000006 /* Assets.xcassets in Resources */,
+				AA2000000000000000000026 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -456,7 +460,9 @@
 				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 5LQWKL72G9;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Cup Queen";
 				INFOPLIST_KEY_GADApplicationIdentifier = "ca-app-pub-3231546664210357~4010518492";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "We use this to show you relevant ads and keep the game free.";
@@ -485,7 +491,9 @@
 				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 5LQWKL72G9;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Cup Queen";
 				INFOPLIST_KEY_GADApplicationIdentifier = "ca-app-pub-3231546664210357~4010518492";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_NSUserTrackingUsageDescription = "We use this to show you relevant ads and keep the game free.";

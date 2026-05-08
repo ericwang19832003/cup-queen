@@ -154,6 +154,7 @@ final class GameState: ObservableObject {
         if mode == .gauntlet {
             phase = .revealing
             let correct = cupIndex == correctCupIndex
+            let roundGauntletLevel = gauntletLevel   // capture before win path increments it
             isCorrect = correct
             if correct {
                 let multiplier = min(streak + 1, 4)
@@ -183,7 +184,7 @@ final class GameState: ObservableObject {
                 }
                 hostMessage = HostMessages.lose.randomElement()!
             }
-            AnalyticsManager.log(.roundResult(mode: "gauntlet", level: gauntletLevel, correct: correct))
+            AnalyticsManager.log(.roundResult(mode: "gauntlet", level: roundGauntletLevel, correct: correct))
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
                 guard self?.phase == .revealing else { return }
                 self?.phase = .result
@@ -195,6 +196,7 @@ final class GameState: ObservableObject {
         phase = .revealing
 
         let correct = cupIndex == correctCupIndex
+        let roundLevel = level   // capture before win path advances level
         isCorrect = correct
 
         if correct {
@@ -255,7 +257,7 @@ final class GameState: ObservableObject {
 
         iCloudSyncManager.shared.push()
 
-        AnalyticsManager.log(.roundResult(mode: mode.submissionKey, level: level, correct: correct))
+        AnalyticsManager.log(.roundResult(mode: mode.submissionKey, level: roundLevel, correct: correct))
 
         // Advance to result after reveal animation finishes (~1.8 s)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in

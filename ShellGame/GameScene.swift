@@ -816,6 +816,18 @@ final class GameScene: SKScene {
             return
         }
     }
+
+    /// Called by the VoiceOver accessibility overlay in GameView to select a cup by identity index.
+    func accessibilitySelectCup(_ cupIndex: Int) {
+        guard isInteractive, cupIndex < cupNodes.count else { return }
+        let cup = cupNodes[cupIndex]
+        cup.run(SKAction.sequence([
+            SKAction.scale(to: 0.87, duration: 0.06),
+            SKAction.scale(to: 1.12, duration: 0.08),
+            SKAction.scale(to: 1.00, duration: 0.08)
+        ]))
+        revealTappedCup(cupIndex)
+    }
 }
 
 // MARK: - SKColor + SwiftUI.Color
