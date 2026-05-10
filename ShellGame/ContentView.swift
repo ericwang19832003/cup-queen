@@ -8,6 +8,8 @@
 //   ANALYTICS  : Track open → "Play Now" tap funnel
 
 import SwiftUI
+import StoreKit
+import UserNotifications
 
 // MARK: - ContentView
 
@@ -32,6 +34,7 @@ struct ContentView: View {
     @State private var remoteSnap: [String: Any] = [:]
     @State private var playerName: String = ""
     @State private var topScore: (name: String, score: Int)? = nil
+    @State private var rival: (name: String, score: Int)? = nil
 
     // Persisted best stats — read fresh each time view appears
     @State private var savedHighScore: Int = 0
@@ -48,51 +51,48 @@ struct ContentView: View {
         NavigationStack {
             ZStack {
                 casinoBackground
+                curtainBackdrop
                 starField
                 cupSpotlight
+                marqueeLights
+                blueAccentLights
 
                 VStack(spacing: 0) {
-                    Spacer().frame(height: 58)   // below status bar / Dynamic Island
+                    Spacer().frame(height: 44)   // below Dynamic Island
 
-                    titleSection
+                    // Jester mascot — top of screen like the real arcade machine
+                    JesterMascotView(glowPulse: glowPulse, compact: true)
+                        .frame(height: 58)
+                    Spacer().frame(height: 2)
+
+                    topBar
                     Spacer().frame(height: 8)
 
                     if isReturningPlayer {
-                        // Returning player: progress card, compact cups, teaser, contextual CTA
-                        HomeProgressCard(
-                            level: savedBestLevel,
-                            highScore: savedHighScore,
-                            wins: UserDefaults.standard.integer(forKey: "cq_wins"),
-                            prestigeCount: savedPrestige,
-                            playerName: playerName,
-                            bestSurvival: savedBestSurvival,
-                            streakCount: savedStreakCount,
-                            rankBadge: rankBadge
-                        )
-                        Spacer().frame(height: 12)
-
-                        HostCharacterView(glowPulse: glowPulse)
-                            .frame(height: 72)
-                        Spacer().frame(height: 6)
-
+                        // ── RETURNING PLAYER ────────────────────────────────
+                        // 1. Cups — theatrical entrance, then idle bob
                         idleCupsSection
-                        Spacer().frame(height: 8)
-
-                        leaderboardTeaser
                         Spacer().frame(height: 14)
 
-                        continueButton
-                        Spacer().frame(height: 6)
-                        freshStartLink
-                        Spacer().frame(height: 8)
-                    } else {
-                        // New player: challenge badge, large demo, how-to, play now
-                        challengeBadge
+                        // 2. Named rival hook (most powerful retention lever)
+                        rivalHook
                         Spacer().frame(height: 10)
 
-                        HostCharacterView(glowPulse: glowPulse)
-                            .frame(height: 80)
-                        Spacer().frame(height: 6)
+
+                        // 4. Daily tension — streak or "play today" nudge
+                        dailyTensionWidget
+                        Spacer().frame(height: 16)
+
+                        // 5. Primary CTA
+                        continueButton
+                        Spacer().frame(height: 8)
+                    } else {
+                        // ── NEW PLAYER ───────────────────────────────────────
+                        titleSection
+                        Spacer().frame(height: 8)
+
+                        challengeBadge
+                        Spacer().frame(height: 10)
 
                         demoShuffleSection
                         Spacer().frame(height: 14)
@@ -104,26 +104,11 @@ struct ContentView: View {
                         Spacer().frame(height: 8)
                     }
 
-                    Divider()
-                        .background(Color.white.opacity(0.15))
-                        .padding(.horizontal, 8)
-                    Spacer().frame(height: 10)
-
-                    secondaryButtonRow
-                    Spacer().frame(height: 24)
+                    tabBar
                 }
                 .padding(.horizontal, 22)
             }
             .ignoresSafeArea(edges: .top)
-            .overlay(alignment: .topLeading) {
-                Button { showSettings = true } label: {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(.callout))
-                        .foregroundColor(.white.opacity(0.35))
-                        .padding(.top, 62)
-                        .padding(.leading, 22)
-                }
-            }
             .sheet(isPresented: $showSettings) {
                 SettingsSheet(onReset: {
                     resetProgress()
@@ -171,6 +156,8 @@ struct ContentView: View {
                 savedStreakCount = StreakManager.shared.streakCount
                 SoundManager.shared.startHomeAmbient()   // Feature 1: home screen jazz
                 checkiCloudConflict()
+                submitHighScoreCatchup()
+                fetchRival()
             }
             .onChange(of: scenePhase) { newPhase in
                 if newPhase == .active {
@@ -235,6 +222,21 @@ struct ContentView: View {
         withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) { ballGlow  = true }
     }
 
+    /// One-time retroactive submission: if the user has a saved high score that
+    /// was never uploaded (e.g. force-quit before session end), submit it now.
+    private func submitHighScoreCatchup() {
+        let ud = UserDefaults.standard
+        guard !ud.bool(forKey: "cq_catchup_submitted") else { return }
+        let high = ud.integer(forKey: "cq_highScore")
+        let name = ud.string(forKey: "cq_player_name") ?? ""
+        let level = max(1, ud.integer(forKey: "cq_bestLevel"))
+        guard high > 0, !name.isEmpty else { return }
+        ud.set(true, forKey: "cq_catchup_submitted")
+        ScoreSubmissionService.shared.submit(
+            playerName: name, score: high, mode: "solo", level: level
+        )
+    }
+
     private func fetchTopScore() {
         guard var components = URLComponents(string: "\(SupabaseConfig.url)/rest/v1/scores") else { return }
         components.queryItems = [
@@ -253,6 +255,123 @@ struct ContentView: View {
                   let top = entries.first else { return }
             DispatchQueue.main.async { self.topScore = (name: top.playerName, score: top.score) }
         }.resume()
+    }
+
+    /// Fetch the player ranked just above the current user — creates a named rival.
+    private func fetchRival() {
+        guard savedHighScore > 0 else { return }
+        guard var components = URLComponents(string: "\(SupabaseConfig.url)/rest/v1/scores") else { return }
+        components.queryItems = [
+            URLQueryItem(name: "select", value: "player_name,score"),
+            URLQueryItem(name: "score",  value: "gt.\(savedHighScore)"),
+            URLQueryItem(name: "order",  value: "score.asc"),
+            URLQueryItem(name: "limit",  value: "1")
+        ]
+        guard let url = components.url else { return }
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
+        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(SupabaseConfig.anonKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        URLSession.shared.dataTask(with: request) { data, _, _ in
+            guard let data,
+                  let entries = try? JSONDecoder().decode([TopEntry].self, from: data),
+                  let r = entries.first else { return }
+            DispatchQueue.main.async { self.rival = (name: r.playerName, score: r.score) }
+        }.resume()
+    }
+
+    // MARK: - Rival Hook
+
+    /// Shows the player just above the user in the leaderboard — named, with score gap.
+    private var rivalHook: some View {
+        Group {
+            if let r = rival {
+                let gap = r.score - savedHighScore
+                let fraction = savedHighScore > 0
+                    ? min(CGFloat(savedHighScore) / CGFloat(r.score), 1.0)
+                    : 0
+                Button { showLeaderboard = true } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Color(red: 1, green: 0.38, blue: 0.18))
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 4) {
+                                Text(r.name)
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white.opacity(0.90))
+                                    .lineLimit(1)
+                                Text("is \(gap) pts ahead")
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundColor(.white.opacity(0.55))
+                            }
+                            // Thin bar: my score vs rival score
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.08))
+                                        .frame(height: 2)
+                                    Capsule()
+                                        .fill(LinearGradient(
+                                            colors: [Color(red: 1, green: 0.38, blue: 0.18),
+                                                     Color(red: 1, green: 0.65, blue: 0.05)],
+                                            startPoint: .leading, endPoint: .trailing))
+                                        .frame(width: geo.size.width * fraction, height: 2)
+                                }
+                            }
+                            .frame(height: 2)
+                        }
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.28))
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(red: 1, green: 0.28, blue: 0.10).opacity(0.10))
+                            .overlay(RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color(red: 1, green: 0.38, blue: 0.18).opacity(0.30),
+                                              lineWidth: 1))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Daily Tension Widget
+
+    private var dailyTensionWidget: some View {
+        let gold   = Color(red: 1, green: 0.83, blue: 0.22)
+        let streak = savedStreakCount
+
+        return Group {
+            if streak >= 2 {
+                // Active streak — show it with urgency
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color(red: 1, green: 0.55, blue: 0.10))
+                    Text("\(streak)-day streak")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(gold)
+                    Text("· Keep it alive today")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.48))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule()
+                        .fill(Color(red: 1, green: 0.45, blue: 0.10).opacity(0.10))
+                        .overlay(Capsule().strokeBorder(
+                            Color(red: 1, green: 0.55, blue: 0.10).opacity(0.28), lineWidth: 1))
+                )
+            }
+        }
     }
 
     private var leaderboardTeaser: some View {
@@ -289,15 +408,179 @@ struct ContentView: View {
     // MARK: - Background
 
     private var casinoBackground: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.06, green: 0.02, blue: 0.18),
-                Color(red: 0.14, green: 0.04, blue: 0.28),
-                Color(red: 0.06, green: 0.02, blue: 0.18)
-            ],
-            startPoint: .top, endPoint: .bottom
-        )
+        ZStack {
+            // Deep carnival navy — darker than before so lights pop
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.02, blue: 0.14),
+                    Color(red: 0.08, green: 0.03, blue: 0.20),
+                    Color(red: 0.04, green: 0.02, blue: 0.14)
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            // Strong edge vignette — pushes focus to center stage
+            RadialGradient(
+                colors: [Color.clear, Color.black.opacity(0.72)],
+                center: .center,
+                startRadius: 100,
+                endRadius: 460
+            )
+        }
         .ignoresSafeArea()
+    }
+
+    /// Red velvet curtain panel behind the cups — arcade machine theatrical stage feel.
+    private var curtainBackdrop: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 78)   // pulled up so jester peeks from curtain top
+            ZStack {
+                // Curtain body — deep burgundy red
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.45, green: 0.04, blue: 0.06),
+                        Color(red: 0.28, green: 0.02, blue: 0.04),
+                        Color(red: 0.45, green: 0.04, blue: 0.06)
+                    ],
+                    startPoint: .leading, endPoint: .trailing
+                )
+                // Centre spotlight on curtain
+                RadialGradient(
+                    colors: [Color(red: 0.70, green: 0.10, blue: 0.08).opacity(0.55), Color.clear],
+                    center: .center, startRadius: 0, endRadius: 200
+                )
+                // Top gold trim rail
+                VStack {
+                    LinearGradient(
+                        colors: [Color(red: 1, green: 0.90, blue: 0.30),
+                                 Color(red: 0.85, green: 0.60, blue: 0.08)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .frame(height: 4)
+                    Spacer()
+                    // Bottom gold trim rail
+                    LinearGradient(
+                        colors: [Color(red: 1, green: 0.90, blue: 0.30),
+                                 Color(red: 0.85, green: 0.60, blue: 0.08)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .frame(height: 4)
+                }
+            }
+            .frame(height: 300)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 8)
+            .shadow(color: Color.black.opacity(0.65), radius: 18, y: 10)
+            Spacer()
+        }
+        .ignoresSafeArea(edges: .top)
+        .allowsHitTesting(false)
+    }
+
+    /// Arcade-cabinet perimeter bulbs — warm white incandescent style like the real machine.
+    private var marqueeLights: some View {
+        GeometryReader { _ in
+            TimelineView(.animation(minimumInterval: 1.0 / 15.0)) { timeline in
+                Canvas { ctx, size in
+                    let t   = timeline.date.timeIntervalSinceReferenceDate
+                    let r: CGFloat   = 9.0      // large round bulbs
+                    let pad: CGFloat = r + 3    // tight inset
+                    let gap: CGFloat = 30       // even spacing
+                    let warm = Color(red: 1.00, green: 0.95, blue: 0.78)   // incandescent white
+
+                    // Build perimeter positions (clockwise)
+                    var pts: [(CGFloat, CGFloat)] = []
+                    var x = pad; while x <= size.width - pad  { pts.append((x, pad)); x += gap }
+                    var y = pad + gap; while y <= size.height - pad { pts.append((size.width - pad, y)); y += gap }
+                    x = size.width - pad - gap; while x >= pad { pts.append((x, size.height - pad)); x -= gap }
+                    y = size.height - pad - gap; while y > pad { pts.append((pad, y)); y -= gap }
+
+                    guard !pts.isEmpty else { return }
+
+                    for (i, p) in pts.enumerated() {
+                        // Gentle independent twinkle — no chase, just subtle life
+                        let phase    = t * 0.6 + Double(i) * 0.38
+                        let twinkle  = 0.88 + 0.12 * sin(phase)
+
+                        // Outer warm glow
+                        let gr = r * 2.4
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: p.0 - gr, y: p.1 - gr,
+                                                   width: gr * 2, height: gr * 2)),
+                            with: .color(warm.opacity(0.22 * twinkle))
+                        )
+                        // Socket ring (dark, gives depth like a real bulb in a socket)
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: p.0 - r, y: p.1 - r,
+                                                   width: r * 2, height: r * 2)),
+                            with: .color(Color(red: 0.12, green: 0.08, blue: 0.04))
+                        )
+                        // Lit glass interior
+                        let ir = r * 0.70
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: p.0 - ir, y: p.1 - ir,
+                                                   width: ir * 2, height: ir * 2)),
+                            with: .color(warm.opacity(0.80 * twinkle))
+                        )
+                        // Specular highlight (top-left)
+                        let sr = r * 0.30
+                        ctx.fill(
+                            Path(ellipseIn: CGRect(x: p.0 - sr * 1.2, y: p.1 - sr * 1.4,
+                                                   width: sr * 1.2, height: sr * 0.9)),
+                            with: .color(Color.white.opacity(0.75 * twinkle))
+                        )
+                    }
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    /// Two blue disco-ball accent lights at the top corners — matches the real arcade machine.
+    private var blueAccentLights: some View {
+        VStack(spacing: 0) {
+            HStack {
+                blueDiscoLight(pulse: glowPulse, delay: 0)
+                Spacer()
+                blueDiscoLight(pulse: glowPulse, delay: 0.5)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 52)
+            Spacer()
+        }
+        .ignoresSafeArea(edges: .top)
+        .allowsHitTesting(false)
+    }
+
+    private func blueDiscoLight(pulse: Bool, delay: Double) -> some View {
+        ZStack {
+            // Outer glow halo
+            Circle()
+                .fill(Color(red: 0.20, green: 0.45, blue: 1.00)
+                    .opacity(pulse ? 0.40 : 0.20))
+                .frame(width: 48, height: 48)
+                .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)
+                    .delay(delay), value: pulse)
+            // Main disc body
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color(red: 0.45, green: 0.70, blue: 1.00),
+                            Color(red: 0.10, green: 0.30, blue: 0.90)
+                        ],
+                        center: .topLeading,
+                        startRadius: 0,
+                        endRadius: 16
+                    )
+                )
+                .frame(width: 28, height: 28)
+            // Specular
+            Circle()
+                .fill(Color.white.opacity(0.55))
+                .frame(width: 9, height: 9)
+                .offset(x: -6, y: -6)
+        }
     }
 
     private var starField: some View {
@@ -308,7 +591,7 @@ struct ContentView: View {
                     let x: CGFloat       = CGFloat(i) * 14.2 + 8
                     let rawY: CGFloat    = CGFloat((i * 41 + 17) % 860)
                     let y                = rawY * (size.height / 860)
-                    let baseOpacity: Double = 0.25 + Double(i % 6) * 0.09
+                    let baseOpacity: Double = 0.12 + Double(i % 6) * 0.04
                     let duration: Double = 1.4  + Double(i % 7) * 0.18
                     let delay: Double    = Double(i % 9) * 0.22
                     let phase            = (t - delay).truncatingRemainder(dividingBy: duration * 2) / (duration * 2)
@@ -346,10 +629,105 @@ struct ContentView: View {
 
     // MARK: - Title Section
 
+    private var topBar: some View {
+        ZStack {
+            HStack {
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundColor(.white.opacity(0.50))
+                }
+                Spacer()
+                if !isReturningPlayer && GameCenterManager.shared.isAuthenticated {
+                    Button { showGameCenter = true } label: {
+                        Image(systemName: "trophy.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                    }
+                } else if isReturningPlayer {
+                    // Score at trailing edge
+                    HStack(spacing: 2) {
+                        Text(savedHighScore.formatted())
+                            .font(.system(size: 13, weight: .heavy, design: .rounded))
+                            .foregroundColor(Color(red: 1, green: 0.92, blue: 0.55))
+                        Text("pts")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22).opacity(0.80))
+                    }
+                }
+            }
+            // Illuminated arcade marquee sign — matches the "Find the ball" sign on the real machine
+            if isReturningPlayer {
+                arcadeSign(text: "CUP QUEEN", pulse: glowPulse)
+            }
+        }
+    }
+
+    // MARK: - Arcade Sign (matches "Find the ball" illuminated panel on real machine)
+
+    /// Illuminated sign with small LED dots around the border — like the arcade machine's title panel.
+    private func arcadeSign(text: String, pulse: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 19, weight: .heavy, design: .rounded))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [
+                        Color(red: 1.00, green: 0.95, blue: 0.50),
+                        Color(red: 1.00, green: 0.75, blue: 0.10),
+                        Color(red: 1.00, green: 0.95, blue: 0.50)
+                    ],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
+            .padding(.horizontal, 28)
+            .padding(.vertical, 9)
+            .background(
+                ZStack {
+                    // Sign body — dark maroon like the arcade
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(red: 0.22, green: 0.03, blue: 0.04))
+                    // LED dot border — drawn with Canvas to match arcade machine
+                    Canvas { ctx, size in
+                        let r: CGFloat   = 3.2
+                        let gap: CGFloat = 12
+                        let pad: CGFloat = r + 3
+                        let dotColor     = Color(red: 1.00, green: 0.90, blue: 0.30)
+                        var pts: [(CGFloat, CGFloat)] = []
+                        var x = pad; while x <= size.width - pad  { pts.append((x, pad)); x += gap }
+                        var y = pad + gap; while y <= size.height - pad { pts.append((size.width - pad, y)); y += gap }
+                        x = size.width - pad - gap; while x >= pad { pts.append((x, size.height - pad)); x -= gap }
+                        y = size.height - pad - gap; while y > pad { pts.append((pad, y)); y -= gap }
+                        for p in pts {
+                            ctx.fill(
+                                Path(ellipseIn: CGRect(x: p.0 - r, y: p.1 - r,
+                                                       width: r * 2, height: r * 2)),
+                                with: .color(dotColor.opacity(0.92))
+                            )
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    // Outer border
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color(red: 1, green: 0.88, blue: 0.28),
+                                         Color(red: 0.85, green: 0.55, blue: 0.05),
+                                         Color(red: 1, green: 0.88, blue: 0.28)],
+                                startPoint: .leading, endPoint: .trailing
+                            ), lineWidth: 1.5
+                        )
+                }
+                .shadow(color: Color(red: 1, green: 0.70, blue: 0.05)
+                    .opacity(pulse ? 0.75 : 0.30),
+                        radius: pulse ? 12 : 6)
+            )
+    }
+
+    // MARK: - Title Section
+
     private var titleSection: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(spacing: 5) {
-                Text("CUP QUEEN")
+        VStack(spacing: 4) {
+            Text("CUP QUEEN")
                 .font(.system(.largeTitle, design: .rounded).weight(.heavy))
                 .foregroundStyle(
                     LinearGradient(
@@ -363,26 +741,12 @@ struct ContentView: View {
                 )
                 .shadow(color: Color(red: 1, green: 0.7, blue: 0).opacity(0.9), radius: 20, y: 3)
 
-                Text("FIND THE BALL")
-                    .font(.system(.caption, design: .rounded).weight(.bold))
-                    .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.90))
-                    .tracking(7)
-            }
-            .frame(maxWidth: .infinity)
-
-            // Game Center leaderboard button
-            if GameCenterManager.shared.isAuthenticated {
-                Button {
-                    showGameCenter = true
-                } label: {
-                    Image(systemName: "trophy.fill")
-                        .font(.title3.weight(.semibold))
-                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
-                        .shadow(color: Color.yellow.opacity(0.55), radius: 6)
-                }
-                .offset(x: 4, y: 2)
-            }
+            Text("PICK THE RIGHT CUP")
+                .font(.system(.caption, design: .rounded).weight(.bold))
+                .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.75))
+                .tracking(5)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Challenge Badge
@@ -523,23 +887,54 @@ struct ContentView: View {
 
     private var idleCupsSection: some View {
         IdleCupsView()
-            .frame(height: 130)
-            .padding(.horizontal, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(LinearGradient(
-                        colors: [Color.black.opacity(0.32),
-                                 Color(red: 0.10, green: 0.05, blue: 0.26).opacity(0.55)],
-                        startPoint: .top, endPoint: .bottom
-                    ))
-                    .overlay(RoundedRectangle(cornerRadius: 24)
-                        .strokeBorder(LinearGradient(
-                            colors: [Color.yellow.opacity(0.55),
-                                     Color.purple.opacity(0.30),
-                                     Color.yellow.opacity(0.55)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ), lineWidth: 1.5))
-            )
+            .frame(height: 240)
+    }
+
+    // MARK: - Single compact stat row for returning players
+
+    private var playerStatsRow: some View {
+        let gold      = Color(red: 1, green: 0.83, blue: 0.22)
+        let goldLight = Color(red: 1, green: 0.92, blue: 0.55)
+        let wins      = UserDefaults.standard.integer(forKey: "cq_wins")
+        let level     = savedBestLevel
+        let fraction  = level > 0 ? min(CGFloat(wins) / CGFloat(level), 1.0) : 0
+        let winsNeeded = max(0, level - wins)
+        let label     = winsNeeded == 1 ? "1 win to L\(level + 1)" : "\(winsNeeded) wins to L\(level + 1)"
+
+        return HStack(spacing: 10) {
+            // Level pill
+            HStack(spacing: 3) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(gold)
+                Text("L\(level)")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundColor(goldLight)
+            }
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(Capsule().fill(gold.opacity(0.14))
+                .overlay(Capsule().strokeBorder(gold.opacity(0.25), lineWidth: 1)))
+
+            // Progress bar — fills remaining horizontal space
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.09)).frame(height: 3)
+                    Capsule()
+                        .fill(LinearGradient(
+                            colors: [Color(red: 1, green: 0.93, blue: 0.28),
+                                     Color(red: 1, green: 0.65, blue: 0.05)],
+                            startPoint: .leading, endPoint: .trailing))
+                        .frame(width: geo.size.width * fraction, height: 3)
+                }
+            }
+            .frame(height: 3)
+
+            // Progress label — fixed width so bar doesn't jitter
+            Text(label)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.55))
+                .fixedSize()
+        }
     }
 
     private var demoShuffleSection: some View {
@@ -566,13 +961,14 @@ struct ContentView: View {
     private var continueButton: some View {
         Button {
             startFreshSelected = false
-            showNameEntry = true
+            navigateToGame = true
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "play.fill")
                     .font(.body.weight(.bold))
-                Text("Continue — Level \(savedBestLevel)")
+                Text("CONTINUE L\(savedBestLevel)")
                     .font(.system(.title3, design: .rounded).weight(.heavy))
+                    .tracking(1)
             }
             .foregroundColor(.black)
             .frame(maxWidth: .infinity)
@@ -589,8 +985,8 @@ struct ContentView: View {
             )
             .clipShape(Capsule())
             .shadow(
-                color: Color(red: 1, green: 0.75, blue: 0.10).opacity(ctaPulse ? 0.80 : 0.38),
-                radius: ctaPulse ? 28 : 14, y: 5
+                color: Color(red: 1, green: 0.75, blue: 0.10).opacity(ctaPulse ? 0.50 : 0.22),
+                radius: ctaPulse ? 18 : 8, y: 3
             )
         }
         .accessibilityLabel("Continue at Level \(savedBestLevel)")
@@ -600,110 +996,113 @@ struct ContentView: View {
     private var freshStartLink: some View {
         Button {
             startFreshSelected = true
-            showNameEntry = true
+            navigateToGame = true
         } label: {
-            Text("Fresh Start")
-                .font(.system(.footnote, design: .rounded).weight(.semibold))
-                .foregroundColor(.white.opacity(0.40))
-                .underline()
+            Text("New Game")
+                .font(.system(size: 15, design: .rounded).weight(.semibold))
+                .foregroundColor(.white.opacity(0.65))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    Capsule()
+                        .fill(Color.white.opacity(0.07))
+                        .overlay(Capsule()
+                            .strokeBorder(Color.white.opacity(0.18), lineWidth: 1))
+                )
         }
     }
 
-    // MARK: - Secondary Button Row
+    // MARK: - Tab Bar
 
-    private var secondaryButtonRow: some View {
-        HStack(spacing: 10) {
-            // Leaderboard
-            Button { showLeaderboard = true } label: {
-                VStack(spacing: 5) {
-                    Image(systemName: "trophy.fill")
-                        .font(.callout.weight(.semibold))
-                    Text("Leaderboard")
-                        .font(.system(.caption2, design: .rounded).weight(.bold))
-                }
-                .foregroundColor(Color(red: 0.30, green: 0.75, blue: 1.00))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.white.opacity(0.06))
-                        .overlay(RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(Color(red: 0.30, green: 0.75, blue: 1.00).opacity(0.40), lineWidth: 1.5))
-                )
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            // Rank
+            tabBarItem(icon: "trophy.fill", label: "Rank",
+                       activeColor: Color(red: 1.00, green: 0.83, blue: 0.22),
+                       active: true) {
+                showLeaderboard = true
             }
 
-            // Duel
-            Button {
+            // Battle
+            tabBarItem(icon: "bolt.fill", label: "Battle",
+                       activeColor: Color(red: 0.55, green: 0.82, blue: 1.00)) {
                 if !GameCenterManager.shared.isAuthenticated { GameCenterManager.shared.authenticate() }
                 showDuelLobby = true
-            } label: {
-                VStack(spacing: 5) {
-                    Image(systemName: "swords")
-                        .font(.callout.weight(.semibold))
-                    Text("Duel")
-                        .font(.system(.caption2, design: .rounded).weight(.bold))
-                }
-                .foregroundColor(Color(red: 1, green: 0.88, blue: 0.30))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.white.opacity(0.07))
-                        .overlay(RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(Color.yellow.opacity(0.45), lineWidth: 1.5))
-                )
             }
 
-            // Style
+            // Skins
             Button { showCustomize = true } label: {
-                VStack(spacing: 5) {
-                    Image(systemName: "paintbrush.fill")
-                        .font(.callout.weight(.semibold))
-                    Text("Style")
-                        .font(.system(.caption2, design: .rounded).weight(.bold))
-                }
-                .foregroundColor(Color(red: 1, green: 0.60, blue: 0.80))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color(red: 0.35, green: 0.05, blue: 0.20).opacity(0.22))
-                        .overlay(RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(Color(red: 1, green: 0.60, blue: 0.80).opacity(0.40), lineWidth: 1.5))
-                )
-                .overlay(alignment: .topTrailing) {
-                    if cosmeticState.hasUnseenUnlock {
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 8, height: 8)
-                            .offset(x: -6, y: 6)
+                tabBarLabel(icon: "paintbrush.pointed.fill", label: "Skins",
+                            activeColor: Color(red: 1.00, green: 0.58, blue: 0.88),
+                            active: false)
+                    .overlay(alignment: .topTrailing) {
+                        if cosmeticState.hasUnseenUnlock {
+                            Circle().fill(Color(red: 1, green: 0.25, blue: 0.35))
+                                .frame(width: 8, height: 8)
+                                .offset(x: 4, y: -2)
+                        }
                     }
-                }
             }
+            .frame(maxWidth: .infinity)
 
-            // Modes
+            // Arcade
             Button { if modesUnlocked { showModes = true } } label: {
-                VStack(spacing: 5) {
-                    Image(systemName: modesUnlocked ? "star.circle.fill" : "lock.fill")
-                        .font(.callout.weight(.semibold))
-                    Text("Modes")
-                        .font(.system(.caption2, design: .rounded).weight(.bold))
-                }
-                .foregroundColor(modesUnlocked
-                    ? Color(red: 0.78, green: 0.58, blue: 1.00)
-                    : .white.opacity(0.28))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(modesUnlocked ? Color(red: 0.35, green: 0.10, blue: 0.60).opacity(0.22) : Color.white.opacity(0.05))
-                        .overlay(RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(
-                                modesUnlocked ? Color(red: 0.65, green: 0.40, blue: 1.00).opacity(0.45) : Color.white.opacity(0.10),
-                                lineWidth: 1.2))
+                tabBarLabel(
+                    icon: modesUnlocked ? "gamecontroller.fill" : "lock.fill",
+                    label: "Arcade",
+                    activeColor: modesUnlocked
+                        ? Color(red: 0.78, green: 0.55, blue: 1.00)
+                        : Color.white.opacity(0.22),
+                    active: false
                 )
             }
+            .frame(maxWidth: .infinity)
             .disabled(!modesUnlocked)
+        }
+        .padding(.top, 12)
+        .padding(.bottom, 28)   // home indicator clearance
+        .background(
+            ZStack {
+                // Frosted glass effect
+                Color(red: 0.06, green: 0.03, blue: 0.18).opacity(0.92)
+                // Subtle top border
+                VStack {
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.14), Color.clear],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .frame(height: 0.5)
+                    Spacer()
+                }
+            }
+        )
+    }
+
+    private func tabBarItem(icon: String, label: String, activeColor: Color, active: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            tabBarLabel(icon: icon, label: label, activeColor: activeColor, active: active)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func tabBarLabel(icon: String, label: String, activeColor: Color, active: Bool = false) -> some View {
+        VStack(spacing: 5) {
+            ZStack {
+                // Active pill highlight
+                if active {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(activeColor.opacity(0.18))
+                        .frame(width: 44, height: 30)
+                }
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(active ? activeColor : .white.opacity(0.38))
+                    .shadow(color: active ? activeColor.opacity(0.60) : .clear, radius: 8)
+            }
+            .frame(height: 30)
+            Text(label)
+                .font(.system(size: 10, design: .rounded).weight(.semibold))
+                .foregroundColor(active ? activeColor : .white.opacity(0.38))
         }
     }
 
@@ -738,140 +1137,326 @@ private struct TopEntry: Decodable {
 }
 
 // MARK: - Settings Sheet
+
 private struct SettingsSheet: View {
     let onReset: () -> Void
-    @State private var showResetConfirm = false
     @Environment(\.dismiss) private var dismiss
+
+    @AppStorage("cq_music_enabled")   private var musicEnabled   = true
+    @AppStorage("cq_sfx_enabled")     private var sfxEnabled     = true
+    @AppStorage("cq_haptics_enabled") private var hapticsEnabled = true
+
+    @State private var notificationsOn     = false
+    @State private var showResetConfirm    = false
+    @State private var isRestoringPurchases = false
+    @State private var restoreMessage: String? = nil
+
+    private let privacyPolicyURL = URL(string: "https://minwang.github.io/cup-queen/privacy")!
 
     var body: some View {
         ZStack {
             LinearGradient(
                 colors: [Color(red: 0.05, green: 0.02, blue: 0.18),
-                         Color(red: 0.12, green: 0.04, blue: 0.26)],
+                         Color(red: 0.10, green: 0.03, blue: 0.22)],
                 startPoint: .top, endPoint: .bottom
             ).ignoresSafeArea()
 
-            VStack(spacing: 28) {
-                HStack {
-                    Spacer()
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(.title2))
-                            .foregroundColor(.white.opacity(0.35))
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-
-                Text("Settings")
-                    .font(.system(.title2, design: .rounded).weight(.bold))
-                    .foregroundColor(.white)
-
-                VStack(spacing: 0) {
-                    Button {
-                        showResetConfirm = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.counterclockwise")
-                                .foregroundColor(.red.opacity(0.80))
-                            Text("Reset Progress")
-                                .font(.system(.callout, design: .rounded))
-                                .foregroundColor(.red.opacity(0.80))
-                            Spacer()
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    HStack {
+                        Text("Settings")
+                            .font(.system(.title2, design: .rounded).weight(.bold))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Button { dismiss() } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(.title2))
+                                .foregroundColor(.white.opacity(0.35))
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
                     }
-                    .background(Color.white.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .padding(.horizontal, 24)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 24)
 
-                Spacer()
+                    // AUDIO
+                    SettingsSection(title: "AUDIO", icon: "music.note") {
+                        SettingsToggleRow(
+                            icon: "music.note",
+                            iconColor: Color(red: 0.55, green: 0.30, blue: 1.0),
+                            label: "Music",
+                            isOn: $musicEnabled
+                        )
+                        .onChange(of: musicEnabled) { val in
+                            if val { SoundManager.shared.startHomeAmbient() }
+                            else   { SoundManager.shared.stopAmbient() }
+                        }
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            icon: "speaker.wave.2.fill",
+                            iconColor: Color(red: 0.30, green: 0.65, blue: 1.0),
+                            label: "Sound Effects",
+                            isOn: $sfxEnabled
+                        )
+                    }
+
+                    // GAMEPLAY
+                    SettingsSection(title: "GAMEPLAY", icon: "gamecontroller") {
+                        SettingsToggleRow(
+                            icon: "iphone.radiowaves.left.and.right",
+                            iconColor: Color(red: 1.0, green: 0.55, blue: 0.15),
+                            label: "Haptics",
+                            isOn: $hapticsEnabled
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            icon: "bell.badge.fill",
+                            iconColor: Color(red: 1.0, green: 0.22, blue: 0.36),
+                            label: "Daily Reminder",
+                            isOn: $notificationsOn
+                        )
+                        .onChange(of: notificationsOn) { val in
+                            if val {
+                                Task {
+                                    let granted = (try? await UNUserNotificationCenter.current()
+                                        .requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+                                    if granted {
+                                        StreakManager.shared.scheduleReminder()
+                                    } else {
+                                        await MainActor.run { notificationsOn = false }
+                                    }
+                                }
+                            } else {
+                                UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+                            }
+                        }
+                    }
+
+                    // ACCOUNT
+                    SettingsSection(title: "ACCOUNT", icon: "person.crop.circle") {
+                        Button {
+                            isRestoringPurchases = true
+                            Task {
+                                await PurchaseManager.shared.restorePurchases()
+                                await MainActor.run {
+                                    isRestoringPurchases = false
+                                    restoreMessage = "Purchases restored!"
+                                }
+                            }
+                        } label: {
+                            SettingsActionRow(
+                                icon: "arrow.clockwise.circle.fill",
+                                iconColor: Color(red: 0.20, green: 0.78, blue: 0.55),
+                                label: isRestoringPurchases ? "Restoring…" : "Restore Purchases"
+                            )
+                        }
+                        .disabled(isRestoringPurchases)
+                    }
+
+                    // SUPPORT
+                    SettingsSection(title: "SUPPORT", icon: "star") {
+                        Button {
+                            if let scene = UIApplication.shared.connectedScenes
+                                .compactMap({ $0 as? UIWindowScene }).first {
+                                SKStoreReviewController.requestReview(in: scene)
+                            }
+                        } label: {
+                            SettingsActionRow(
+                                icon: "star.fill",
+                                iconColor: Color(red: 1.0, green: 0.80, blue: 0.10),
+                                label: "Rate Cup Queen"
+                            )
+                        }
+                        SettingsDivider()
+                        Link(destination: privacyPolicyURL) {
+                            SettingsActionRow(
+                                icon: "hand.raised.fill",
+                                iconColor: Color(red: 0.50, green: 0.70, blue: 1.0),
+                                label: "Privacy Policy"
+                            )
+                        }
+                        SettingsDivider()
+                        HStack {
+                            Image(systemName: "info.circle.fill")
+                                .font(.system(size: 17))
+                                .foregroundColor(.white.opacity(0.35))
+                                .frame(width: 30)
+                            Text("Version")
+                                .font(.system(.callout, design: .rounded))
+                                .foregroundColor(.white.opacity(0.70))
+                            Spacer()
+                            Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
+                                .font(.system(.callout, design: .rounded))
+                                .foregroundColor(.white.opacity(0.40))
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 14)
+                    }
+
+                    // DANGER ZONE
+                    SettingsSection(title: "DANGER ZONE", icon: "exclamationmark.triangle", accentColor: Color.red.opacity(0.70)) {
+                        Button { showResetConfirm = true } label: {
+                            HStack {
+                                Image(systemName: "arrow.counterclockwise.circle.fill")
+                                    .font(.system(size: 17))
+                                    .foregroundColor(.red.opacity(0.80))
+                                    .frame(width: 30)
+                                Text("Start New Game")
+                                    .font(.system(.callout, design: .rounded))
+                                    .foregroundColor(.red.opacity(0.85))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.red.opacity(0.40))
+                            }
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    Spacer(minLength: 32)
+                }
             }
         }
-        .presentationDetents([.height(280)])
-        .alert("Reset Progress?", isPresented: $showResetConfirm) {
-            Button("Reset", role: .destructive) { onReset() }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .onAppear { checkNotificationStatus() }
+        .alert("Start New Game?", isPresented: $showResetConfirm) {
+            Button("Start Over", role: .destructive) { onReset(); dismiss() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will clear your level, score, and all wins. You'll restart from Level 1.")
+            Text("This will reset your level, score, and all wins. You'll start fresh from Level 1.")
+        }
+        .alert("Purchases Restored", isPresented: .init(
+            get: { restoreMessage != nil },
+            set: { if !$0 { restoreMessage = nil } }
+        )) {
+            Button("OK") { restoreMessage = nil }
+        } message: {
+            Text(restoreMessage ?? "")
+        }
+    }
+
+    private func checkNotificationStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                notificationsOn = settings.authorizationStatus == .authorized
+            }
         }
     }
 }
 
-// MARK: - Host Character (magic emblem)
+// MARK: - Settings Sub-Components
 
-private struct HostCharacterView: View {
-    let glowPulse: Bool
+private struct SettingsSection<Content: View>: View {
+    let title: String
+    let icon: String
+    var accentColor: Color = Color(red: 1, green: 0.80, blue: 0.22).opacity(0.75)
+    @ViewBuilder let content: () -> Content
 
     var body: some View {
-        ZStack {
-            // Outer glow ring
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color(red: 0.55, green: 0.02, blue: 0.75).opacity(glowPulse ? 0.45 : 0.22),
-                            Color.clear
-                        ],
-                        center: .center, startRadius: 20, endRadius: 70
-                    )
-                )
-                .frame(width: 140, height: 140)
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(accentColor)
+                .tracking(1.5)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 8)
 
-            // Inner ring
-            Circle()
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 1, green: 0.85, blue: 0.22).opacity(0.85),
-                            Color(red: 0.75, green: 0.25, blue: 1.00).opacity(0.60),
-                            Color(red: 1, green: 0.85, blue: 0.22).opacity(0.85)
-                        ],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 2
-                )
-                .frame(width: 82, height: 82)
-
-            // Top hat emoji
-            Text("🎩")
-                .font(.system(size: 42))
-                .offset(y: -2)
-                .shadow(color: Color(red: 1, green: 0.80, blue: 0.10).opacity(0.70), radius: 12)
-
-            // Sparkle — top
-            Image(systemName: "sparkle")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(Color(red: 1, green: 0.85, blue: 0.22).opacity(glowPulse ? 0.90 : 0.45))
-                .offset(x: 0, y: -52)
-
-            // Sparkle — left
-            Image(systemName: "sparkle")
-                .font(.system(size: 7, weight: .bold))
-                .foregroundColor(Color(red: 1, green: 0.85, blue: 0.22).opacity(glowPulse ? 0.80 : 0.38))
-                .offset(x: -46, y: -8)
-
-            // Sparkle — right
-            Image(systemName: "sparkle")
-                .font(.system(size: 7, weight: .bold))
-                .foregroundColor(Color(red: 1, green: 0.85, blue: 0.22).opacity(glowPulse ? 0.80 : 0.38))
-                .offset(x: 46, y: -8)
-
-            // Sparkle — bottom-left
-            Image(systemName: "sparkle")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundColor(Color(red: 0.78, green: 0.50, blue: 1.00).opacity(glowPulse ? 0.70 : 0.30))
-                .offset(x: -28, y: 36)
-
-            // Sparkle — bottom-right
-            Image(systemName: "sparkle")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundColor(Color(red: 0.78, green: 0.50, blue: 1.00).opacity(glowPulse ? 0.70 : 0.30))
-                .offset(x: 28, y: 36)
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(Color.white.opacity(0.055))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
         }
-        .compositingGroup()
+    }
+}
+
+private struct SettingsToggleRow: View {
+    let icon: String
+    let iconColor: Color
+    let label: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 17))
+                    .foregroundColor(iconColor)
+                    .frame(width: 30)
+                Text(label)
+                    .font(.system(.callout, design: .rounded))
+                    .foregroundColor(.white.opacity(0.90))
+            }
+        }
+        .tint(Color(red: 0.55, green: 0.30, blue: 1.0))
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+    }
+}
+
+private struct SettingsActionRow: View {
+    let icon: String
+    let iconColor: Color
+    let label: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.system(size: 17))
+                .foregroundColor(iconColor)
+                .frame(width: 30)
+            Text(label)
+                .font(.system(.callout, design: .rounded))
+                .foregroundColor(.white.opacity(0.85))
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white.opacity(0.25))
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+    }
+}
+
+private struct SettingsDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.07))
+            .frame(height: 1)
+            .padding(.leading, 56)
+    }
+}
+
+// MARK: - Jester Mascot (emoji-based — Apple's renderer beats any SwiftUI shapes)
+
+private struct JesterMascotView: View {
+    let glowPulse: Bool
+    let compact: Bool
+
+    var body: some View {
+        let size: CGFloat = compact ? 52 : 68
+
+        ZStack {
+            // Stage spotlight glow behind the character
+            Circle()
+                .fill(RadialGradient(
+                    colors: [Color(red: 1, green: 0.85, blue: 0.20)
+                        .opacity(glowPulse ? 0.32 : 0.16), Color.clear],
+                    center: .center, startRadius: 4, endRadius: size * 0.9
+                ))
+                .frame(width: size * 2.0, height: size * 2.0)
+
+            // Clown emoji — Apple's renderer, always looks polished
+            Text("🤡")
+                .font(.system(size: size))
+                .shadow(color: Color.black.opacity(0.45), radius: 8, y: 4)
+        }
     }
 }
 
@@ -880,13 +1465,15 @@ private struct HostCharacterView: View {
 struct PreviewCupView: View {
     let lit: Bool
     var theme: CupTheme = .classicRed
+    var width: CGFloat = 74
+    var height: CGFloat = 92
 
     var body: some View {
         ZStack {
             Canvas { ctx, size in
                 drawCup(ctx: ctx, size: size)
             }
-            .frame(width: 74, height: 92)
+            .frame(width: width, height: height)
 
             // Shine strip on lit cup
             if lit {
@@ -951,11 +1538,11 @@ struct GoldenBallView: View {
 
     var body: some View {
         ZStack {
-            // Outer glow halo
+            // Outer glow halo — focused, not overly blurry
             Circle()
-                .fill(Color(red: 1, green: 0.80, blue: 0.10).opacity(glowPulse ? 0.60 : 0.28))
-                .frame(width: diameter * 1.9, height: diameter * 1.9)
-                .blur(radius: 7)
+                .fill(Color(red: 1, green: 0.80, blue: 0.10).opacity(glowPulse ? 0.65 : 0.30))
+                .frame(width: diameter * 2.0, height: diameter * 2.0)
+                .blur(radius: 6)
 
             // Ball body — radial gold gradient
             Circle()
@@ -995,114 +1582,117 @@ private struct HomeProgressCard: View {
     let rankBadge: String
 
     private var isMaxLevel: Bool { level >= 30 }
+    /// wins / level → fills toward 100% as player approaches the next level threshold
     private var progressFraction: CGFloat {
-        CGFloat(wins - (level - 1)) / 1.0
+        guard level > 0 else { return 0 }
+        return min(CGFloat(wins) / CGFloat(level), 1.0)
     }
     private var nextLevelLabel: String {
         if isMaxLevel {
             return bestSurvival > 0 ? "Survived \(bestSurvival) in a row" : "MAX LEVEL"
         }
-        let winsNeeded = level - wins
-        let w = max(0, winsNeeded)
-        return w == 1 ? "1 win to L\(level + 1)" : "\(w) wins to L\(level + 1)"
+        let winsNeeded = max(0, level - wins)
+        return winsNeeded == 1 ? "1 win to L\(level + 1)" : "\(winsNeeded) wins to L\(level + 1)"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Top row: level + score
-            HStack {
-                HStack(spacing: 5) {
+        let gold = Color(red: 1, green: 0.83, blue: 0.22)
+        let goldLight = Color(red: 1, green: 0.92, blue: 0.55)
+        let trimmed = playerName.trimmingCharacters(in: .whitespaces)
+
+        VStack(alignment: .leading, spacing: 8) {
+            // Row 1: Level pill (left) · pts (right)
+            HStack(alignment: .center) {
+                // Compact level pill — avoids "Level 11" word redundancy
+                HStack(spacing: 4) {
                     Image(systemName: "crown.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
-                    Text(isMaxLevel ? "MAX" : "Level \(level)")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(gold)
+                    Text(isMaxLevel ? "MAX" : "L\(level)")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundColor(goldLight)
                 }
+                .padding(.horizontal, 9).padding(.vertical, 4)
+                .background(Capsule().fill(gold.opacity(0.12))
+                    .overlay(Capsule().strokeBorder(gold.opacity(0.28), lineWidth: 1)))
                 Spacer()
-                HStack(spacing: 5) {
-                    Text("\(highScore) pts")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(red: 1, green: 0.90, blue: 0.55))
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(Color(red: 1, green: 0.80, blue: 0.22))
+                HStack(spacing: 3) {
+                    Text(highScore.formatted())
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .foregroundColor(goldLight)
+                    Text("pts")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(gold.opacity(0.75))
                 }
             }
 
-            // Progress bar or survival count
-            if isMaxLevel {
-                Text(nextLevelLabel)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.55))
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
+            // Row 2: Name · streak · rank
+            HStack(spacing: 5) {
+                if !trimmed.isEmpty {
+                    Text(trimmed)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(goldLight.opacity(0.75))
+                }
+                if !trimmed.isEmpty && streakCount > 0 {
+                    Text("·")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.25))
+                    HStack(spacing: 3) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(Color(red: 1, green: 0.55, blue: 0.10))
+                        Text("\(streakCount)-day streak")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(Color(red: 1, green: 0.72, blue: 0.10))
+                    }
+                }
+                Spacer()
+                // Rank as text pill (avoids emoji rendering bugs)
+                Text(rankBadge)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundColor(goldLight)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Capsule().fill(gold.opacity(0.16))
+                        .overlay(Capsule().strokeBorder(gold.opacity(0.30), lineWidth: 1)))
+            }
+
+            // Row 3: Progress bar + label
+            if !isMaxLevel {
+                VStack(alignment: .leading, spacing: 3) {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
+                            Capsule().fill(Color.white.opacity(0.10)).frame(height: 4)
                             Capsule()
-                                .fill(Color.white.opacity(0.12))
-                                .frame(height: 6)
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color(red: 1, green: 0.93, blue: 0.28),
-                                                 Color(red: 1, green: 0.68, blue: 0.05)],
-                                        startPoint: .leading, endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: geo.size.width * max(0, min(progressFraction, 1.0)), height: 6)
+                                .fill(LinearGradient(
+                                    colors: [Color(red: 1, green: 0.93, blue: 0.28),
+                                             Color(red: 1, green: 0.65, blue: 0.05)],
+                                    startPoint: .leading, endPoint: .trailing
+                                ))
+                                .frame(width: geo.size.width * max(0, min(progressFraction, 1.0)), height: 4)
                         }
                     }
-                    .frame(height: 6)
+                    .frame(height: 4)
                     Text(nextLevelLabel)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(0.50))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.78))
                 }
-            }
-
-            // Greeting
-            let trimmed = playerName.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty {
-                let crowns = prestigeCount > 0 ? " " + String(repeating: "👑", count: min(prestigeCount, 3)) : ""
-                Text("Welcome back, \(trimmed)\(crowns)")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(Color(red: 0.95, green: 0.82, blue: 0.55).opacity(0.85))
-                    .kerning(1.2)
-            }
-
-            // Streak + rank row
-            HStack(spacing: 8) {
-                if streakCount > 0 {
-                    HStack(spacing: 4) {
-                        Text("🔥")
-                        Text("\(streakCount) day streak")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundColor(Color(red: 1, green: 0.68, blue: 0.05))
-                    }
-                    .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(Color(red: 1, green: 0.68, blue: 0.05).opacity(0.12))
-                    .clipShape(Capsule())
-                }
-                Text(rankBadge)
-                    .font(.system(size: 14))
-                Spacer()
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.black.opacity(0.32))
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.black.opacity(0.38))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: 18)
                         .strokeBorder(
                             LinearGradient(
-                                colors: [Color.yellow.opacity(0.55),
-                                         Color.purple.opacity(0.30),
-                                         Color.yellow.opacity(0.55)],
+                                colors: [gold.opacity(0.50),
+                                         Color.purple.opacity(0.20),
+                                         gold.opacity(0.50)],
                                 startPoint: .topLeading, endPoint: .bottomTrailing
                             ),
-                            lineWidth: 1.5
+                            lineWidth: 1
                         )
                 )
         )
@@ -1115,6 +1705,10 @@ private struct IdleCupsView: View {
     @State private var leftY:   CGFloat = 0
     @State private var centreY: CGFloat = 0
     @State private var rightY:  CGFloat = 0
+    // Entrance: cups start above screen, slam down on appear
+    @State private var leftEntrance:   CGFloat = -320
+    @State private var centreEntrance: CGFloat = -320
+    @State private var rightEntrance:  CGFloat = -320
     @State private var glowPulse = false
     @State private var ballGlow  = false
     @State private var isActive  = false
@@ -1122,54 +1716,75 @@ private struct IdleCupsView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Spotlight
+            // Focused warm spotlight under the table
             Ellipse()
-                .fill(Color.yellow.opacity(glowPulse ? 0.20 : 0.09))
-                .frame(width: 96, height: 28)
+                .fill(Color(red: 1, green: 0.78, blue: 0.12).opacity(glowPulse ? 0.28 : 0.12))
+                .frame(width: 220, height: 32)
                 .blur(radius: 10)
-                .offset(y: -12)
+                .offset(y: 2)
 
-            // Felt strip
-            RoundedRectangle(cornerRadius: 6)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.08, green: 0.28, blue: 0.14),
-                                 Color(red: 0.05, green: 0.18, blue: 0.09)],
+            // Casino table platform
+            ZStack {
+                // Felt body — deep burgundy purple
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(LinearGradient(
+                        colors: [Color(red: 0.30, green: 0.08, blue: 0.48),
+                                 Color(red: 0.16, green: 0.04, blue: 0.26)],
                         startPoint: .top, endPoint: .bottom
-                    )
-                )
-                .frame(maxWidth: .infinity, maxHeight: 12)
-                .padding(.horizontal, 8)
-                .shadow(color: .black.opacity(0.55), radius: 8, y: 4)
-
-            // Cups + ball
-            HStack(spacing: 20) {
-                PreviewCupView(lit: false, theme: cupTheme)
-                    .offset(y: leftY)
-                ZStack(alignment: .bottom) {
-                    PreviewCupView(lit: true, theme: cupTheme)
-                        .offset(y: centreY)
-                    GoldenBallView(diameter: 26, glowPulse: ballGlow)
-                        .offset(y: centreY + 18)
+                    ))
+                    .frame(maxWidth: .infinity, maxHeight: 18)
+                // Gold top rail overlay
+                VStack {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(LinearGradient(
+                            colors: [Color(red: 1, green: 0.90, blue: 0.35),
+                                     Color(red: 0.85, green: 0.60, blue: 0.08)],
+                            startPoint: .top, endPoint: .bottom
+                        ))
+                        .frame(maxWidth: .infinity, maxHeight: 3)
+                    Spacer()
                 }
-                PreviewCupView(lit: false, theme: cupTheme)
-                    .offset(y: rightY)
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 14)
+            .frame(maxWidth: .infinity, maxHeight: 18)
+            .shadow(color: Color(red: 1, green: 0.78, blue: 0.10).opacity(0.18), radius: 6, y: -2)
+            .shadow(color: .black.opacity(0.80), radius: 12, y: 8)
+
+            // Cups + ball — entrance offset combined with idle bob offset
+            HStack(spacing: 22) {
+                PreviewCupView(lit: false, theme: cupTheme, width: 88, height: 110)
+                    .offset(y: leftY + leftEntrance)
+                ZStack(alignment: .bottom) {
+                    PreviewCupView(lit: true, theme: cupTheme, width: 88, height: 110)
+                        .offset(y: centreY + centreEntrance)
+                    GoldenBallView(diameter: 32, glowPulse: ballGlow)
+                        .offset(y: centreY + centreEntrance + 22)
+                }
+                PreviewCupView(lit: false, theme: cupTheme, width: 88, height: 110)
+                    .offset(y: rightY + rightEntrance)
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 16)
         }
         .onAppear {
             cupTheme = CosmeticState.shared.activeCup
-            // Ball glow
-            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-                ballGlow = true
+
+            // ── Entrance: cups slam down from above, staggered ──
+            let slamSpring = Animation.interpolatingSpring(stiffness: 260, damping: 22)
+            withAnimation(slamSpring.delay(0.05)) { leftEntrance   = 0 }
+            withAnimation(slamSpring.delay(0.18)) { centreEntrance = 0 }
+            withAnimation(slamSpring.delay(0.31)) { rightEntrance  = 0 }
+
+            // ── Idle animations start after slam lands ──
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                    ballGlow = true
+                }
+                withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
+                    glowPulse = true
+                }
+                isActive = true
+                startBobLoop()
             }
-            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
-                glowPulse = true
-            }
-            // Staggered bob: left → centre → right, 3s total loop
-            isActive = true
-            startBobLoop()
         }
         .onDisappear { isActive = false }
     }

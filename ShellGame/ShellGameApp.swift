@@ -55,28 +55,41 @@ import GoogleMobileAds
 import UIKit
 
 private enum AdUnitID {
+    #if DEBUG
+    // Google test ad unit IDs — avoids AdMob publisher verification crash in debug/simulator
+    static let interstitial = "ca-app-pub-3940256099942544/4411468910"
+    static let rewarded     = "ca-app-pub-3940256099942544/1712485313"
+    #else
     static let interstitial = "ca-app-pub-3231546664210357/4171512040"
     static let rewarded     = "ca-app-pub-3231546664210357/2792805593"
+    #endif
 }
 
-final class AdManager {
+final class AdManager: NSObject, FullScreenContentDelegate {
 
     static let shared = AdManager()
-    private init() {
+    private override init() {
         adsRemoved = UserDefaults.standard.bool(forKey: "cq_ads_removed")
     }
 
     private(set) var adsRemoved: Bool = false
 
-    private var interstitial: GADInterstitialAd?
-    private var rewardedAd: GADRewardedAd?
+    private var interstitial: InterstitialAd?
+    private var rewardedAd: RewardedAd?
+    /// Keeps the rewarded ad alive while it is presenting (prevents premature dealloc crash).
+    private var presentingRewardedAd: RewardedAd?
+    private var onRewardedDismiss: (() -> Void)?
 
     // MARK: - Setup
 
     func configure() {
-        GADMobileAds.sharedInstance().start(completionHandler: nil)
-        GADMobileAds.sharedInstance().requestConfiguration.maxAdContentRating = .general
-        preloadRewardedAd()
+        MobileAds.shared.requestConfiguration.maxAdContentRating = .general
+        // Preload ads only after the SDK has fully started; requesting ads before
+        // start() completes causes GADApplicationVerifyPublisherInitializedCorrectly
+        // to throw on the background verification queue → crash.
+        MobileAds.shared.start { [weak self] _ in
+            self?.preloadRewardedAd()
+        }
     }
 
     // MARK: - Interstitial (3rd cumulative loss)
@@ -98,10 +111,10 @@ final class AdManager {
         guard !adsRemoved, let rootVC = rootViewController() else { return }
 
         do {
-            interstitial = try await GADInterstitialAd.load(
-                withAdUnitID: AdUnitID.interstitial, request: GADRequest()
+            interstitial = try await InterstitialAd.load(
+                with: AdUnitID.interstitial, request: Request()
             )
-            interstitial?.present(fromRootViewController: rootVC)
+            interstitial?.present(from: rootVC)
             AnalyticsManager.log(.adShow(type: "interstitial"))
         } catch { print("AdManager: interstitial load failed — \(error)") }
     }
@@ -118,7 +131,7 @@ final class AdManager {
 
     func preloadRewardedAd() {
         guard !adsRemoved else { return }
-        GADRewardedAd.load(withAdUnitID: AdUnitID.rewarded, request: GADRequest()) { [weak self] ad, error in
+        RewardedAd.load(with: AdUnitID.rewarded, request: Request()) { [weak self] ad, error in
             if let error { print("AdManager: rewarded load failed — \(error)"); return }
             self?.rewardedAd = ad
         }
@@ -130,13 +143,39 @@ final class AdManager {
         guard let rootVC = rootViewController() else { return }
 
         guard let rewardedAd else {
-            print("AdManager: no rewarded ad loaded")
+            print("AdManager: no rewarded ad loaded — granting hint anyway")
+            onRewarded()
             return
         }
-        rewardedAd.present(fromRootViewController: rootVC, userDidEarnRewardHandler: onRewarded)
+
+        // Retain the ad for the full duration of presentation; releasing it
+        // while it is displayed causes a crash when the SDK calls back on dismiss.
+        presentingRewardedAd = rewardedAd
+        self.rewardedAd = nil           // clear slot so preload can start
+        onRewardedDismiss = onRewarded  // kept for presentation-failure fallback path
+        presentingRewardedAd?.fullScreenContentDelegate = self
+
+        presentingRewardedAd?.present(from: rootVC, userDidEarnRewardHandler: {
+            onRewarded()
+            self.onRewardedDismiss = nil   // reward already granted — clear to avoid double-fire
+        })
         AnalyticsManager.log(.adShow(type: "rewarded"))
-        self.rewardedAd = nil
-        preloadRewardedAd()  // pre-load next ad immediately after presentation
+        preloadRewardedAd()             // pre-load next ad in background
+    }
+
+    // MARK: - FullScreenContentDelegate
+
+    func adDidDismissFullScreenContent(_ ad: FullScreenPresentingAd) {
+        // Safe to release now that the ad is fully dismissed
+        presentingRewardedAd = nil
+    }
+
+    func ad(_ ad: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
+        print("AdManager: rewarded ad failed to present — \(error)")
+        presentingRewardedAd = nil
+        // Grant the reward anyway so the player isn't punished for an SDK failure
+        onRewardedDismiss?()
+        onRewardedDismiss = nil
     }
 
     // MARK: - IAP

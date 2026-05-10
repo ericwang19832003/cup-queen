@@ -832,12 +832,22 @@ final class GameScene: SKScene {
 
 // MARK: - SKColor + SwiftUI.Color
 
-/// Convenience init so GameScene can convert SwiftUI Color values from CosmeticState
-/// into SKColor (UIColor) without touching the SpriteKit API surface.
-/// Requires iOS 14+ (UIColor(color:) initializer). Minimum deployment target is iOS 16.
+/// Converts a SwiftUI Color into SKColor (UIColor) for SpriteKit use.
+/// Uses Color.cgColor (iOS 15+) instead of UIColor(Color:) to avoid infinite
+/// recursion: SKColor is a typealias for UIColor, so calling UIColor(swiftColor)
+/// inside an SKColor extension resolves back to itself.
 private extension SKColor {
-    convenience init(_ color: SwiftUI.Color) {
-        let ui = UIColor(color)
-        self.init(cgColor: ui.cgColor)
+    convenience init(_ swiftColor: SwiftUI.Color) {
+        if let cg = swiftColor.cgColor {
+            self.init(cgColor: cg)
+        } else {
+            // Fallback: extract RGBA components via a resolved UIColor in the
+            // display-P3 color space.  This path is hit when the color is
+            // defined in a non-CGColor-backed color space (e.g. named system colors).
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            let fallback = UIColor(hue: 0, saturation: 0, brightness: 0.5, alpha: 1)
+            fallback.getRed(&r, green: &g, blue: &b, alpha: &a)
+            self.init(red: r, green: g, blue: b, alpha: a)
+        }
     }
 }

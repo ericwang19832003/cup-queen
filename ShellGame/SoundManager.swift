@@ -88,10 +88,26 @@ final class SoundManager {
         try? engine.start()
     }
 
+    // MARK: - User Preferences
+
+    var isMusicEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: "cq_music_enabled") as? Bool ?? true }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "cq_music_enabled")
+            if !newValue { stopAmbient() }
+        }
+    }
+
+    var isSFXEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: "cq_sfx_enabled") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "cq_sfx_enabled") }
+    }
+
     // MARK: - Public Context API
 
     /// Feature 1: Vegas lounge jazz — 12s I-VI-IV-V loop. Plays on home screen.
     func startHomeAmbient() {
+        guard isMusicEnabled else { return }
         stopLayer()
         switchAmbient(to: homeBuffer)
         ambientNode.volume = 1.0
@@ -101,6 +117,7 @@ final class SoundManager {
     /// Skips the switch if the tier is already playing (avoids interruption within a tier).
     /// L1-2 = warm Cmaj7/Am7  |  L3-5 = tense Am7/Dm7  |  L6-7 = dark Em7/B7
     func startGameAmbient(level: Int) {
+        guard isMusicEnabled else { return }
         stopLayer()
         let buf: AVAudioPCMBuffer
         switch level {
@@ -118,6 +135,7 @@ final class SoundManager {
 
     /// Feature 3: Driving Em/Am duel music. Plays in CompetitionView.
     func startCompetitionAmbient() {
+        guard isMusicEnabled else { return }
         stopLayer()
         switchAmbient(to: competitionBuffer)
         ambientNode.volume = 1.0
@@ -670,6 +688,7 @@ final class SoundManager {
     // MARK: - Helpers
 
     private func playSting(_ buffer: AVAudioPCMBuffer) {
+        guard isSFXEnabled else { return }
         if !engine.isRunning { try? engine.start() }
         stingNode.stop()
         stingNode.scheduleBuffer(buffer)

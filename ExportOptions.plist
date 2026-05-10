@@ -4,16 +4,8 @@
 <dict>
     <key>method</key>
     <string>app-store-connect</string>
-    <key>teamID</key>
-    <string>5LQWKL72G9</string>
-    <key>uploadBitcode</key>
-    <false/>
-    <key>compileBitcode</key>
-    <false/>
     <key>destination</key>
     <string>upload</string>
-    <key>signingStyle</key>
-    <string>automatic</string>
     <key>allowProvisioningUpdates</key>
     <true/>
 </dict>

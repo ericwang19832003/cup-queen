@@ -28,6 +28,10 @@ struct GameView: View {
     @State       private var showScoreboard: Bool = false
     @State       private var sessionEntryID: UUID? = nil
     @State       private var hasSubmittedSession: Bool = false
+
+    private var hapticsEnabled: Bool {
+        UserDefaults.standard.object(forKey: "cq_haptics_enabled") as? Bool ?? true
+    }
     @State       private var milestoneToast: String? = nil
     @State       private var showShare: Bool = false
     @State       private var shareImage: UIImage? = nil
@@ -48,32 +52,7 @@ struct GameView: View {
                 // ── SpriteKit game canvas ─────────────────────────────────
                 GeometryReader { geo in
                     if let scene = scene {
-                        SpriteView(scene: scene, options: [.allowsTransparency])
-                            .frame(width: geo.size.width, height: 310)
-                            .onAppear { resizeScene(to: geo.size) }
-                            .accessibilityLabel("Shell game play area")
-                            .accessibilityHint(gameState.phase == .choosing ? "Tap the cup hiding the ball" : "")
-                            .accessibilityAddTraits(.allowsDirectInteraction)
-
-                        // VoiceOver per-cup accessibility overlay — invisible to sighted users,
-                        // only active during the choosing phase.
-                        if gameState.phase == .choosing {
-                            let config = LevelConfig.config(for: gameState.level)
-                            let halfW  = geo.size.width / 2
-                            // Scene cupY = -10; flip to SwiftUI coords: 310/2 - (-10) = 165
-                            let viewY: CGFloat = 165
-                            ForEach(Array(config.slotXPositions.enumerated()), id: \.offset) { i, sceneX in
-                                Button {
-                                    scene.accessibilitySelectCup(i)
-                                } label: {
-                                    Color.clear
-                                        .frame(width: config.hitDX * 2, height: config.cupSize.height)
-                                }
-                                .position(x: sceneX + halfW, y: viewY)
-                                .accessibilityLabel("Cup \(i + 1) of \(config.cupCount)")
-                                .accessibilityHint("Double-tap to choose this cup")
-                            }
-                        }
+                        spriteCanvas(scene: scene, geo: geo)
                     }
                 }
                 .frame(height: 310)
@@ -199,7 +178,7 @@ struct GameView: View {
             if newPhase == .placing {
                 // Haptic: ball thud when cup covers it (slight delay matches animation)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    if self.hapticsEnabled { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
                 }
             }
             if newPhase == .shuffling {
@@ -215,16 +194,18 @@ struct GameView: View {
         }
         .onChange(of: gameState.isCorrect) { result in
             guard let result else { return }
-            if result {
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-            } else {
-                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            if hapticsEnabled {
+                if result {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                } else {
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
             }
         }
         .onChange(of: gameState.level) { _ in
             showLevelUp = true
             SoundManager.shared.playLevelUp()
-            UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            if hapticsEnabled { UIImpactFeedbackGenerator(style: .heavy).impactOccurred() }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { showLevelUp = false }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
@@ -232,9 +213,13 @@ struct GameView: View {
             // Game Center is idempotent — safe to call on background
             GameCenterManager.shared.submitHighScore(gameState.highScore)
             GameCenterManager.shared.submitSurvivalCount(gameState.survivalCount)
+            // Also flush to Supabase so force-quit doesn't lose the session score
+            submitSessionScores()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             scene?.isPaused = false
+            // Allow a fresh final submission if the player improves their score after returning
+            hasSubmittedSession = false
             // If the player missed the shuffle while away, restart the round cleanly
             if [.placing, .shuffling, .choosing].contains(gameState.phase) {
                 scene?.resetForNewRound()
@@ -286,6 +271,23 @@ struct GameView: View {
             removal:    .scale(scale: 1.2).combined(with: .opacity)
         ))
         .animation(.spring(response: 0.38, dampingFraction: 0.6), value: showLevelUp)
+    }
+
+    // MARK: - SpriteKit canvas
+
+    /// Extracted to avoid compiler type-check timeout in body.
+    /// Applies VoiceOver custom actions without intercepting normal touches.
+    private func spriteCanvas(scene: GameScene, geo: GeometryProxy) -> some View {
+        SpriteView(scene: scene, options: [.allowsTransparency])
+            .frame(width: geo.size.width, height: 310)
+            .onAppear { resizeScene(to: geo.size) }
+            .accessibilityLabel("Shell game play area")
+            .accessibilityHint(gameState.phase == .choosing ? "Tap the cup hiding the ball" : "")
+            .accessibilityAddTraits(.allowsDirectInteraction)
+            // VoiceOver custom actions let users select a specific cup by name
+            .accessibilityAction(named: "Select left cup")   { scene.accessibilitySelectCup(0) }
+            .accessibilityAction(named: "Select middle cup") { scene.accessibilitySelectCup(1) }
+            .accessibilityAction(named: "Select right cup")  { scene.accessibilitySelectCup(2) }
     }
 
     // MARK: - Background
@@ -388,7 +390,7 @@ struct GameView: View {
                 withAnimation(.easeOut(duration: 0.18)) { hintVisible = false }
                 AdManager.shared.showRewardedAd {
                     scene?.peekBall()
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    if self.hapticsEnabled { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
                 }
             } label: {
                 HStack(spacing: 7) {
